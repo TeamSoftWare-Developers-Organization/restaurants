@@ -1,21 +1,30 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+// نستخدم متغيرات البيئة للوصول إلى عنوان الـ API
+const API_BASE_URL = import.meta.env.NUXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:8000/api';
+ 
 export default defineNuxtConfig({
-  compatibilityDate: '2025-12-13',
-
-  // Nuxt automatically reads environment variables and exposes them via runtimeConfig.
-  // Variables prefixed with NUXT_PUBLIC_ are exposed to the frontend.
+  // تفعيل الاتصال عبر الـ API لجميع الطلبات
   runtimeConfig: {
     public: {
-      // The environment variable NUXT_PUBLIC_API_BASE_URL will override the default value.
-      apiBase: process.env.NUXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:8000/api',
+      apiBase: API_BASE_URL,
     }
   },
   
-  // Enable devtools for development
+  // تفعيل دعم الـ Cookie والـ CORS أثناء التطوير
   devtools: { enabled: true },
   
-  // CSS files to include
+  // إعدادات أخرى قد نحتاجها لاحقًا (مثل CSS و Plugins)
   css: [
-    // CSS/Sass files can be added here later
+    // يمكن إضافة ملفات CSS أو Sass هنا لاحقاً
   ],
 })
+function defineNuxtConfig<T extends {
+  // تفعيل الاتصال عبر الـ API لجميع الطلبات
+  runtimeConfig: { public: { apiBase: any } };
+  // تفعيل دعم الـ Cookie والـ CORS أثناء التطوير
+  devtools: { enabled: boolean };
+  // إعدادات أخرى قد نحتاجها لاحقًا (مثل CSS و Plugins)
+  css: never[];
+}>(config: T): T {
+  return config;
+}

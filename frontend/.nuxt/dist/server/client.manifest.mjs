@@ -1,1 +1,1 @@
-export default ({"@vite/client":{prefetch:!0,isEntry:!0,file:"@vite/client",css:[],module:!0,resourceType:"script",dynamicImports:void 0},"E:/restaurants/frontend/node_modules/nuxt/dist/app/entry.js":{resourceType:"script",module:!0,prefetch:!0,preload:!0,isEntry:!0,file:"E:/restaurants/frontend/node_modules/nuxt/dist/app/entry.js",dynamicImports:void 0}})
+export { default } from "file:///E:/restaurants/frontend/node_modules/@nuxt/vite-builder/dist/runtime/client.manifest.mjs"

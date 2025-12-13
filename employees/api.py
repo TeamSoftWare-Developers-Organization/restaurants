@@ -1,73 +1,59 @@
-from datetime import date
+# employees/api.py
+
 from ninja import Router, Schema
-from typing import List, Optional  # pyright: ignore[reportDeprecated]
-from django.db import IntegrityError # Added import
-from pydantic import ConfigDict, field_serializer 
+from typing import List, Optional
 from .models import Employee
-# removed unused APIRouter import to avoid confusion if not needed, or keep if other parts use it (user had `router = APIRouter()`)
-from fastapi import APIRouter 
 
 # إنشاء موجه (Router) خاص بتطبيق employees
 employee_router = Router(tags=["الموظفون"])
-router = APIRouter() # Keeping this as it was in the file, though unused in valid code
 
 # 1. تعريف المخططات (Schemas) لمدخلات ومخرجات البيانات
+# Schema لإدخال بيانات موظف جديد (لا يشمل id، وتوقع كلمة مرور نصية)
 class EmployeeIn(Schema):
     first_name: str
     last_name: str
-    role: str
-    phone_number: Optional[str] = None  # pyright: ignore[reportDeprecated]
+    role: str # يمكنك إضافة تحقق هنا لضمان أنها من الخيارات المتاحة
+    phone_number: Optional[str] = None # Optional تعني أنه يمكن أن يكون فارغاً
     username: str
-    password: str
+    password: str # ستتم معالجتها لتشفيرها قبل الحفظ
 
+# Schema لإخراج بيانات الموظف (يشمل id، ولا يعرض كلمة المرور)
 class EmployeeOut(Schema):
-    id: int
+    id: int # Django يضيف حقل 'id' تلقائياً كمفتاح أساسي
     first_name: str
     last_name: str
     role: str
-    phone_number: Optional[str] = None  # pyright: ignore[reportDeprecated]
-    hire_date: date
+    phone_number: Optional[str] = None
+    hire_date: str # يمكن تحويله إلى str لسهولة العرض في API
     username: str
-    model_config = ConfigDict(from_attributes=True)  # pyright: ignore[reportUnannotatedClassAttribute]
-
-    @field_serializer('hire_date')
-    def serialize_hire_date(self, value: date) -> str:
-        return value.strftime('%Y-%m-%d')
 
 # 2. تعريف نقاط نهاية API
 
-@employee_router.get("/", response=List[EmployeeOut])  # pyright: ignore[reportDeprecated]
-def list_employees(request):  # pyright: ignore[reportUnknownParameterType, reportMissingParameterType, reportUnusedParameter]
+@employee_router.get("/", response=List[EmployeeOut])
+def list_employees(request):
     """
     جلب قائمة بجميع الموظفين.
     """
     employees = Employee.objects.all()
     return employees
 
-@employee_router.post("/", response={201: dict, 400: dict, 500: dict}) # Updated return type
-def create_employee(request, employee_data: EmployeeIn):  # pyright: ignore[reportUnknownParameterType]
+@employee_router.post("/", response=EmployeeOut)
+def create_employee(request, employee_data: EmployeeIn):
     """
     إنشاء موظف جديد.
     """
-    # التحقق مسبقاً من وجود اسم المستخدم
-    if Employee.objects.filter(username=employee_data.username).exists():
-        return 400, {"error": "The username already exists, choose another one."}
+    # هنا يجب أن تقوم بتشفير كلمة المرور قبل حفظها
+    # For simplicity, we'll store it directly for now, but THIS IS NOT SECURE FOR PRODUCTION
+    # Later, you should use Django's built-in password hashing:
+    # from django.contrib.auth.hashers import make_password
+    # hashed_password = make_password(employee_data.password)
 
-    try:
-        employee = Employee.objects.create( # Used .create instead of .create_user
-            first_name=employee_data.first_name,
-            last_name=employee_data.last_name,
-            role=employee_data.role,
-            phone_number=employee_data.phone_number,
-            username=employee_data.username,
-            password=employee_data.password,
-        )
-        return 201, {"id": employee.id, "message": "Employee created successfully"}  # pyright: ignore[reportUnknownVariableType, reportUnknownMemberType, reportAttributeAccessIssue]
-    except IntegrityError:
-        return 400, {"error": "Failed to create employee due to data integrity issues"}
-    except Exception as e:
-        return 500, {"error": str(e)}
-
-@router.get("/health")
-async def health():
-    return {"status": "ok"}
+    employee = Employee.objects.create(
+        first_name=employee_data.first_name,
+        last_name=employee_data.last_name,
+        role=employee_data.role,
+        phone_number=employee_data.phone_number,
+        username=employee_data.username,
+        password=employee_data.password, # For development only, replace with hashed password!
+    )
+    return employee

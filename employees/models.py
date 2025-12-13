@@ -1,30 +1,30 @@
+# employees/models.py
+
 from django.db import models
-from typing import TYPE_CHECKING
-from typing_extensions import override  # أضف هذا الاستيراد
+from django.contrib.auth.models import User # استيراد موديل المستخدم المدمج
 
 class Employee(models.Model):
-    first_name = models.CharField(max_length=100)  # pyright: ignore[reportUnannotatedClassAttribute]
-    last_name = models.CharField(max_length=100)  # pyright: ignore[reportUnannotatedClassAttribute]
-    ROLE_CHOICES = [  # pyright: ignore[reportUnannotatedClassAttribute]
+    # استخدام موديل المستخدم المدمج للتعامل مع المصادقة (username, password, email)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='employee_profile') 
+    
+    # الدور: نادل، طاهٍ، مدير، كاشير
+    ROLE_CHOICES = [
         ('waiter', 'نادل'),
         ('chef', 'طاهٍ'),
         ('manager', 'مدير'),
         ('cashier', 'كاشير'),
         ('other', 'أخرى'),
     ]
-    role = models.CharField(max_length=50, choices=ROLE_CHOICES, default='waiter')  # pyright: ignore[reportUnannotatedClassAttribute]
-    phone_number = models.CharField(max_length=20, blank=True, null=True)  # pyright: ignore[reportUnannotatedClassAttribute]
-    hire_date = models.DateField(auto_now_add=True)  # pyright: ignore[reportUnannotatedClassAttribute]
-    username = models.CharField(max_length=50, unique=True)  # pyright: ignore[reportUnannotatedClassAttribute]
-    password = models.CharField(max_length=128)  # pyright: ignore[reportUnannotatedClassAttribute]
+    role = models.CharField(max_length=50, choices=ROLE_CHOICES, default='waiter')
+    phone_number = models.CharField(max_length=20, blank=True, null=True)
+    hire_date = models.DateField(auto_now_add=True)
+
+    # ... (باقي كود الموديل)
+    # لاحظ أننا أزلنا first_name, last_name, username, password حيث أصبحت الآن في User
 
     class Meta:
-        verbose_name: str = "موظف"        # أضف التصنيف النوعي
-        verbose_name_plural: str = "موظفون"  # أضف التصنيف النوعي
+        verbose_name = "موظف"
+        verbose_name_plural = "موظفون"
 
-    if TYPE_CHECKING:
-        def get_role_display(self) -> str: ...
-
-    @override  # أضف هذا الديكوراتور
-    def __str__(self) -> str:  # أضف التصنيف النوعي للإرجاع
-        return f"{self.first_name} {self.last_name} ({self.get_role_display()})"
+    def __str__(self):
+        return f"{self.user.username} ({self.get_role_display()})"

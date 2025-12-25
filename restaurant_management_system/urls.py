@@ -5,13 +5,30 @@ from django.urls import path
 from ninja import NinjaAPI 
 # استيراد الـ routers من تطبيقاتنا
 from employees.api import employee_router
-# ... (سنستورد الموجهات الأخرى هنا لاحقاً)
-#      إنشاء كائن NinjaAPI
+from auth.api import auth_router
+# from inventory.api import inventory_router
+# from orders.api import orders_router
+# from tables.api import tables_router
+# from menu.api import menu_router
+# from kitchen.api import kitchen_router
+# from reports.api import reports_router
+# from pos.api import pos_router
+# إنشاء كائن NinjaAPI
 api = NinjaAPI(title="Restaurant Management System API",
     description="API للتعامل مع نظام إدارة المطاعم",
     version="1.0.0",)
 
-# سنضيف هنا مسارات الـ APIs لكل تطبيق
+# Registering controllers/routers
+api.add_router("/employees", employee_router)
+api.add_router("/auth", auth_router)
+# api.add_router("inventory/", inventory_router)
+# api.add_router("orders/", orders_router)
+# api.add_router("tables/", tables_router)
+# api.add_router("menu/", menu_router)
+# api.add_router("kitchen/", kitchen_router)
+# api.add_router("reports/", reports_router)
+# api.add_router("pos/", pos_router)
+
 # مثال:
 # @api.get("/hello")
 # def hello(request):

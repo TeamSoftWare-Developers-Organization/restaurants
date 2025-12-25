@@ -1,13 +1,12 @@
 <template>
-  <div class="login-layout bg-gray-100 min-h-screen flex items-center justify-center">
-    <slot />
+  <div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8" dir="rtl">
+    <div class="max-w-md w-full space-y-8">
+      <!-- الشعار أو العنوان العام يمكن إضافته هنا -->
+      <slot />
+    </div>
   </div>
 </template>
 
 <script setup>
-// لا يوجد منطق Vue معقد هنا، فقط الهيكل
+// Layout for login page
 </script>
-
-<style scoped>
-/* إضافة أنماط بسيطة إذا لزم الأمر */
-</style>

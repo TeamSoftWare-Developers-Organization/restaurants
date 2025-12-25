@@ -50,6 +50,7 @@ definePageMeta({
 
 const runtimeConfig = useRuntimeConfig();
 const API_URL = runtimeConfig.public.apiBase;
+const userStore = useUserStore();
 
 // بيانات النموذج
 const username = ref('');
@@ -76,11 +77,8 @@ const handleLogin = async () => {
 
     // إذا نجح التسجيل، نحفظ بيانات المستخدم وننتقل إلى لوحة التحكم
     if (response && response.is_authenticated) {
-        // يمكن حفظ بيانات المستخدم هنا في Pinia أو Vuex (نظام إدارة الحالة)
-        // لتبسيط الأمر الآن، سننتقل مباشرة إلى صفحة أخرى
-        
-        // حفظ بيانات المستخدم في التخزين المحلي (مثال مؤقت)
-        localStorage.setItem('user_profile', JSON.stringify(response.employee_profile));
+        // حفظ بيانات المستخدم في المتجر (Pinia)
+        userStore.setUser(response.employee_profile);
         
         // التوجيه إلى الصفحة الرئيسية/التحكم
         await navigateTo('/'); 

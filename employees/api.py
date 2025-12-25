@@ -3,6 +3,8 @@
 from ninja import Router, Schema
 from typing import List, Optional
 from .models import Employee
+from django.contrib.auth.models import User
+from django.db import transaction
 
 # إنشاء موجه (Router) خاص بتطبيق employees
 employee_router = Router(tags=["الموظفون"])
@@ -27,6 +29,21 @@ class EmployeeOut(Schema):
     hire_date: str # يمكن تحويله إلى str لسهولة العرض في API
     username: str
 
+    @staticmethod
+    def resolve_first_name(obj):
+        if not obj.user: return ""
+        return obj.user.first_name
+
+    @staticmethod
+    def resolve_last_name(obj):
+        if not obj.user: return ""
+        return obj.user.last_name
+
+    @staticmethod
+    def resolve_username(obj):
+        if not obj.user: return ""
+        return obj.user.username
+
 # 2. تعريف نقاط نهاية API
 
 @employee_router.get("/", response=List[EmployeeOut])
@@ -37,23 +54,31 @@ def list_employees(request):
     employees = Employee.objects.all()
     return employees
 
-@employee_router.post("/", response=EmployeeOut)
+@employee_router.post("/", response={200: EmployeeOut, 400: dict})
 def create_employee(request, employee_data: EmployeeIn):
     """
     إنشاء موظف جديد.
     """
-    # هنا يجب أن تقوم بتشفير كلمة المرور قبل حفظها
-    # For simplicity, we'll store it directly for now, but THIS IS NOT SECURE FOR PRODUCTION
-    # Later, you should use Django's built-in password hashing:
-    # from django.contrib.auth.hashers import make_password
-    # hashed_password = make_password(employee_data.password)
+    try:
+        with transaction.atomic():
+            if User.objects.filter(username=employee_data.username).exists():
+                return 400, {"message": "اسم المستخدم مستخدم بالفعل"}
 
-    employee = Employee.objects.create(
-        first_name=employee_data.first_name,
-        last_name=employee_data.last_name,
-        role=employee_data.role,
-        phone_number=employee_data.phone_number,
-        username=employee_data.username,
-        password=employee_data.password, # For development only, replace with hashed password!
-    )
-    return employee
+            # 1. Create User
+            user = User.objects.create_user(
+                username=employee_data.username,
+                password=employee_data.password,
+                first_name=employee_data.first_name,
+                last_name=employee_data.last_name
+            )
+
+            # 2. Create Employee Profile
+            employee = Employee.objects.create(
+                user=user,
+                role=employee_data.role,
+                phone_number=employee_data.phone_number
+            )
+            return 200, employee
+            
+    except Exception as e:
+        return 400, {"message": str(e)}

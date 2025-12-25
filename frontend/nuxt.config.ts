@@ -1,15 +1,15 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 // نستخدم متغيرات البيئة للوصول إلى عنوان الـ API
-const API_BASE_URL = import.meta.env.NUXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:8000/api';
  
 export default defineNuxtConfig({
   // تفعيل الاتصال عبر الـ API لجميع الطلبات
   runtimeConfig: {
     public: {
-      apiBase: API_BASE_URL,
+      apiBase: process.env.VITE_API_BASE_URL,
     }
+    
   },
-  
+  modules: ['@pinia/nuxt'],
   // تفعيل دعم الـ Cookie والـ CORS أثناء التطوير
   devtools: { enabled: true },
   

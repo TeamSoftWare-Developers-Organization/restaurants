@@ -13,12 +13,16 @@ from inventory.api import inventory_router
 from reservations.api import reservations_router
 from payments.api import payments_router
 
-# إنشاء كائن NinjaAPI
-api = NinjaAPI(title="Restaurant Management System API",
+from ninja_extra import NinjaExtraAPI
+from ninja_jwt.controller import NinjaJWTDefaultController
+
+# إنشاء كائن NinjaExtraAPI لدعم JWT
+api = NinjaExtraAPI(title="Restaurant Management System API",
     description="API للتعامل مع نظام إدارة المطاعم",
     version="1.0.0",)
 
 # Registering controllers/routers
+api.register_controllers(NinjaJWTDefaultController) # المسار سيكون /api/token/
 api.add_router("/employees", employee_router)
 api.add_router("/auth", auth_router)
 api.add_router("/orders", order_router)

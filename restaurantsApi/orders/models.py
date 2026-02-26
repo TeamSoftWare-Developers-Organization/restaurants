@@ -35,8 +35,9 @@ class Order(models.Model):
 
     # دالة مساعدة لحساب الإجمالي (يمكن تحديثها عندما يتم إضافة OrderItems)
     def calculate_total(self):
+        from decimal import Decimal
         total = sum(item.quantity * item.unit_price for item in self.items.all())
-        self.total_amount = total - self.discount_amount
+        self.total_amount = Decimal(total) - Decimal(self.discount_amount)
         self.save()
 
 
@@ -57,8 +58,18 @@ class OrderItem(models.Model):
     def __str__(self):
         return f"{self.quantity} x {self.menu_item.name if self.menu_item else 'صنف محذوف'} (طلب {self.order.id})"
 
-    # دالة لحفظ السعر الحالي للصنف عند إضافة OrderItem
+    # دالة لحفظ السعر الحالي للصنف عند إضافة OrderItem وخصم المخزون
     def save(self, *args, **kwargs):
+        is_new = self.pk is None
         if not self.unit_price and self.menu_item:
             self.unit_price = self.menu_item.price
+        
         super().save(*args, **kwargs)
+        
+        # خصم المخزون إذا كان الصنف جديداً وله وصفة
+        if is_new and self.menu_item:
+            try:
+                from inventory.models import RecipeIngredient
+                RecipeIngredient.deduct_stock_for_item(self.menu_item, self.quantity)
+            except ImportError:
+                pass # في حال وجود مشاكل في الاستيراد الدائري أو غيره

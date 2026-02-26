@@ -2,6 +2,8 @@
 
 from ninja import Router, Schema
 from typing import List, Optional
+from django.shortcuts import get_object_or_404
+from django.db import IntegrityError
 from .models import Category, MenuItem
 
 # إنشاء موجه (Router) خاص بتطبيق menu
@@ -31,15 +33,18 @@ def create_category(request, category_data: CategoryIn):
     """
     إنشاء فئة صنف جديدة.
     """
-    category = Category.objects.create(**category_data.dict())
-    return category
+    try:
+        category = Category.objects.create(**category_data.dict())
+        return category
+    except IntegrityError:
+        return 400, {"message": "هذه الفئة موجودة بالفعل."}
 
 @menu_router.get("/categories/{category_id}/", response=CategoryOut)
 def get_category(request, category_id: int):
     """
     جلب تفاصيل فئة صنف محددة.
     """
-    category = Category.objects.get(id=category_id)
+    category = get_object_or_404(Category, id=category_id)
     return category
 
 @menu_router.put("/categories/{category_id}/", response=CategoryOut)
@@ -126,7 +131,7 @@ def update_menu_item(request, item_id: int, item_data: MenuItemIn):
     """
     تحديث صنف قائمة موجود.
     """
-    item = MenuItem.objects.get(id=item_id)
+    item = get_object_or_404(MenuItem, id=item_id)
     
     # تحديث حقل الفئة بشكل خاص
     if item_data.category_id is not None:

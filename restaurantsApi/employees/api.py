@@ -4,6 +4,7 @@ from ninja import Router, Schema
 from typing import List, Optional
 from .models import Employee
 from django.contrib.auth.models import User
+from django.shortcuts import get_object_or_404
 from django.db import transaction
 
 # إنشاء موجه (Router) خاص بتطبيق employees
@@ -89,3 +90,40 @@ def create_employee(request, employee_data: EmployeeIn):
             
     except Exception as e:
         return 400, {"message": str(e)}
+
+@employee_router.put("/{employee_id}/", response={200: EmployeeOut, 400: dict})
+def update_employee(request, employee_id: int, employee_data: EmployeeIn):
+    """
+    تحديث بيانات موظف.
+    """
+    employee = get_object_or_404(Employee, id=employee_id)
+    try:
+        with transaction.atomic():
+            user = employee.user
+            user.first_name = employee_data.first_name
+            user.last_name = employee_data.last_name
+            user.username = employee_data.username
+            if employee_data.password:
+                user.set_password(employee_data.password)
+            user.save()
+
+            employee.role = employee_data.role
+            employee.phone_number = employee_data.phone_number
+            employee.save()
+            return 200, employee
+    except Exception as e:
+        return 400, {"message": str(e)}
+
+@employee_router.delete("/{employee_id}/")
+def delete_employee(request, employee_id: int):
+    """
+    حذف موظف.
+    """
+    employee = get_object_or_404(Employee, id=employee_id)
+    if employee.user:
+        user = employee.user
+        employee.delete()
+        user.delete()
+    else:
+        employee.delete()
+    return {"success": True}

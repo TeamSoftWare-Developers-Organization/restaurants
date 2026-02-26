@@ -1,0 +1,43 @@
+import api from '@/lib/api';
+
+export interface Category {
+    id: number;
+    name: string;
+}
+
+export interface MenuItem {
+    id: number;
+    name: string;
+    description?: string;
+    price: number;
+    category?: Category;
+    category_id?: number;
+    is_available: boolean;
+    image_url?: string;
+}
+
+export const menuService = {
+    getCategories: async (): Promise<Category[]> => {
+        const response = await api.get('/menu/categories/');
+        return response.data;
+    },
+    createCategory: async (name: string): Promise<Category> => {
+        const response = await api.post('/menu/categories/', { name });
+        return response.data;
+    },
+    getMenuItems: async (): Promise<MenuItem[]> => {
+        const response = await api.get('/menu/items/');
+        return response.data;
+    },
+    createMenuItem: async (item: Partial<MenuItem>): Promise<MenuItem> => {
+        const response = await api.post('/menu/items/', item);
+        return response.data;
+    },
+    updateMenuItem: async (id: number, item: Partial<MenuItem>): Promise<MenuItem> => {
+        const response = await api.put(`/menu/items/${id}/`, item);
+        return response.data;
+    },
+    deleteMenuItem: async (id: number): Promise<void> => {
+        await api.delete(`/menu/items/${id}/`);
+    }
+};

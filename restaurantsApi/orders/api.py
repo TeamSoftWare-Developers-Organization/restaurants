@@ -65,35 +65,43 @@ def list_orders(request):
     orders = Order.objects.all()
     return orders
 
-@order_router.post("/", response=OrderOut)
+@order_router.post("/", response={200: OrderOut, 500: dict})
 def create_order(request, order_data: OrderIn):
     """
     إنشاء طلب جديد وإضافة أصناف إليه.
     """
-    employee = None
-    if order_data.employee_id:
-        employee = get_object_or_404(Employee, id=order_data.employee_id)
+    try:
+        # Debugging: Log the incoming data
+        print(f"DEBUG: Incoming Order Data: {order_data.dict()}")
+        
+        employee = None
+        if order_data.employee_id:
+            employee = get_object_or_404(Employee, id=order_data.employee_id)
 
-    order = Order.objects.create(
-        employee=employee,
-        table_number=order_data.table_number,
-        status=order_data.status or 'pending', # استخدم القيمة الافتراضية إذا لم يتم توفيرها
-        discount_amount=order_data.discount_amount
-    )
-
-    # إضافة أصناف الطلب
-    for item_data in order_data.items:
-        menu_item = get_object_or_404(MenuItem, id=item_data.menu_item_id)
-        OrderItem.objects.create(
-            order=order,
-            menu_item=menu_item,
-            quantity=item_data.quantity,
-            # سيتم تعيين unit_price تلقائياً في دالة save لموديل OrderItem
-            notes=item_data.notes
+        order = Order.objects.create(
+            employee=employee,
+            table_number=order_data.table_number,
+            status=order_data.status or 'pending',
+            discount_amount=order_data.discount_amount
         )
-    
-    order.calculate_total() # تحديث الإجمالي بعد إضافة الأصناف
-    return order
+
+        # إضافة أصناف الطلب
+        for item_data in order_data.items:
+            menu_item = get_object_or_404(MenuItem, id=item_data.menu_item_id)
+            OrderItem.objects.create(
+                order=order,
+                menu_item=menu_item,
+                quantity=item_data.quantity,
+                notes=item_data.notes
+            )
+        
+        order.calculate_total() # تحديث الإجمالي بعد إضافة الأصناف
+        return 200, order
+    except Exception as e:
+        import traceback
+        error_detail = traceback.format_exc()
+        print("Backend Error:", error_detail)
+        return 500, {"message": str(e), "detail": error_detail}
 
 @order_router.get("/{order_id}", response=OrderOut)
 def get_order(request, order_id: int):

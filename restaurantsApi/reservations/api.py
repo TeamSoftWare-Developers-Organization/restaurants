@@ -62,6 +62,33 @@ def create_table(request, table_data: TableIn):
     )
     return table
 
+@reservations_router.put("/tables/{table_id}/", response=TableOut)
+def update_table(request, table_id: int, table_data: TableIn):
+    """
+    تحديث بيانات الطاولة.
+    """
+    table = get_object_or_404(Table, id=table_id)
+    order = None
+    if table_data.current_order_id:
+        order = get_object_or_404(Order, id=table_data.current_order_id)
+    
+    table.table_number = table_data.table_number
+    table.capacity = table_data.capacity
+    table.status = table_data.status
+    table.location = table_data.location
+    table.current_order = order
+    table.save()
+    return table
+
+@reservations_router.delete("/tables/{table_id}/")
+def delete_table(request, table_id: int):
+    """
+    حذف طاولة.
+    """
+    table = get_object_or_404(Table, id=table_id)
+    table.delete()
+    return {"success": True}
+
 # 2. تعريف المخططات (Schemas) لـ Reservation
 
 class ReservationIn(Schema):
@@ -114,3 +141,32 @@ def create_reservation(request, reservation_data: ReservationIn):
         notes=reservation_data.notes
     )
     return reservation
+
+@reservations_router.put("/reservations/{reservation_id}/", response=ReservationOut)
+def update_reservation(request, reservation_id: int, reservation_data: ReservationIn):
+    """
+    تحديث بيانات الحجز.
+    """
+    reservation = get_object_or_404(Reservation, id=reservation_id)
+    table = None
+    if reservation_data.table_id:
+        table = get_object_or_404(Table, id=reservation_data.table_id)
+    
+    reservation.table = table
+    reservation.customer_name = reservation_data.customer_name
+    reservation.customer_phone = reservation_data.customer_phone
+    reservation.reservation_time = reservation_data.reservation_time
+    reservation.number_of_guests = reservation_data.number_of_guests
+    reservation.status = reservation_data.status
+    reservation.notes = reservation_data.notes
+    reservation.save()
+    return reservation
+
+@reservations_router.delete("/reservations/{reservation_id}/")
+def delete_reservation(request, reservation_id: int):
+    """
+    حذف حجز.
+    """
+    reservation = get_object_or_404(Reservation, id=reservation_id)
+    reservation.delete()
+    return {"success": True}

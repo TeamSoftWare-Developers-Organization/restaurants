@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-gpylx5u^ascj7xj#5^*d0*ym-p+1ckaq(ok501ao2&n9*u1ddh
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'payments',
     'corsheaders',
     'ninja', 
+    'ninja_extra',
 ]
 
 MIDDLEWARE = [
@@ -154,13 +155,5 @@ CSRF_TRUSTED_ORIGINS = [
     'http://127.0.0.1:3002',
 ]
 
-# CORS settings
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://localhost:3001",
-    "http://localhost:3002",
-    "http://127.0.0.1:3000",
-    "http://127.0.0.1:3001",
-    "http://127.0.0.1:3002",
-]
+CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True

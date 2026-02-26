@@ -3,21 +3,20 @@ from menu.models import MenuItem # استيراد موديل صنف القائم
 
 class Ingredient(models.Model):
     # ingredient_id (مفتاح أساسي) يتم إنشاؤه تلقائياً بواسطة Django كـ 'id'
-    name = models.CharField(max_length=100, unique=True) # اسم المكون (مثال: طماطم، دقيق، دجاج)
-    current_stock = models.DecimalField(max_digits=10, decimal_places=2, default=0.00) # الكمية المتوفرة حالياً
+    name = models.CharField(max_length=100, unique=True) # اسم المادة (مثلاً: دقيق فاخر)
+    current_stock = models.FloatField(default=0.0) # الكمية الحالية (مثلاً: 50.5)
     
-    # وحدة القياس: كجم، لتر، قطعة، علبة، إلخ.
+    # وحدة القياس: كجم، لتر، قطعة
     UNIT_CHOICES = [
-        ('kg', 'كيلوجرام'),
-        ('liter', 'لتر'),
-        ('pcs', 'قطعة/وحدة'),
-        ('box', 'علبة'),
-        ('g', 'جرام'),
-        ('ml', 'مليلتر'),
+        ('KG', 'كيلوجرام'),
+        ('Liter', 'لتر'),
+        ('Piece', 'قطعة/وحدة'),
     ]
-    unit_of_measure = models.CharField(max_length=10, choices=UNIT_CHOICES, default='pcs')
+    unit = models.CharField(max_length=10, choices=UNIT_CHOICES, default='Piece')
     
-    reorder_level = models.DecimalField(max_digits=10, decimal_places=2, default=0.00) # المستوى الذي عنده يجب إعادة الطلب
+    cost_per_unit = models.DecimalField(max_digits=10, decimal_places=2, default=0.00) # تكلفة الوحدة الواحدة
+    reorder_level = models.FloatField(default=0.0) # الحد الأدنى الذي يطلق التنبيه
+    last_updated = models.DateTimeField(auto_now=True) # متى تم آخر تحديث
 
     class Meta:
         verbose_name = "مكون"
@@ -25,7 +24,7 @@ class Ingredient(models.Model):
         ordering = ['name']
 
     def __str__(self):
-        return f"{self.name} ({self.current_stock} {self.get_unit_of_measure_display()})"
+        return f"{self.name} ({self.current_stock} {self.get_unit_display()})"
 
 class RecipeIngredient(models.Model):
     # لا يوجد مفتاح أساسي خاص، المفتاح الأساسي هو مركب من item و ingredient
@@ -40,4 +39,16 @@ class RecipeIngredient(models.Model):
         unique_together = ('menu_item', 'ingredient')
 
     def __str__(self):
-        return f"{self.menu_item.name} يتطلب {self.quantity_needed} {self.ingredient.get_unit_of_measure_display()} من {self.ingredient.name}"
+        return f"{self.menu_item.name} يتطلب {self.quantity_needed} {self.ingredient.get_unit_display()} من {self.ingredient.name}"
+
+    @classmethod
+    def deduct_stock_for_item(cls, menu_item, quantity):
+        """
+        خصم الكميات من المخزون بناءً على وصفة الصنف.
+        """
+        recipes = cls.objects.filter(menu_item=menu_item)
+        for recipe in recipes:
+            ingredient = recipe.ingredient
+            reduction = float(recipe.quantity_needed) * quantity
+            ingredient.current_stock -= reduction
+            ingredient.save()

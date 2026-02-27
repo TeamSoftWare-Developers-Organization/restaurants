@@ -8,6 +8,7 @@ import {
     Home,
     Truck,
     LayoutDashboard,
+    ChefHat,
     BadgeCheck,
     Snowflake,
     Building2,
@@ -16,7 +17,12 @@ import {
     LogOut,
     ChevronLeft,
     User,
-    ShoppingBag
+    ShoppingBag,
+    Table as TableIcon,
+    Wallet,
+    ReceiptText,
+    Banknote,
+    Settings
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 
@@ -25,10 +31,15 @@ const links = [
     { label: 'نقطة البيع', icon: ShoppingBag, href: '/pos', color: 'emerald' },
     { label: 'الموظفون', icon: User, href: '/employees', color: 'blue' },
     { label: 'المخزون', icon: Snowflake, href: '/inventory', color: 'amber' },
-    { label: 'قائمة الطعام', icon: LayoutDashboard, href: '/menu', color: 'violet' },
+    { label: 'قائمة الطعام', icon: ChefHat, href: '/menu', color: 'violet' },
     { label: 'الطلبات', icon: Truck, href: '/orders', color: 'rose' },
+    { label: 'الطاولات', icon: TableIcon, href: '/tables', color: 'cyan' },
     { label: 'الحجوزات', icon: BadgeCheck, href: '/reservations', color: 'sky' },
-    { label: 'المدفوعات', icon: Building2, href: '/payments', color: 'orange' }
+    { label: 'المدفوعات', icon: Building2, href: '/payments', color: 'orange' },
+    { label: 'الخزينة', icon: Wallet, href: '/treasury', color: 'indigo' },
+    { label: 'المصروفات', icon: ReceiptText, href: '/expenses', color: 'rose' },
+    { label: 'المرتبات', icon: Banknote, href: '/salaries', color: 'emerald' },
+    { label: 'الإعدادات', icon: Settings, href: '/settings', color: 'slate' }
 ];
 
 const colorVariants: Record<string, string> = {
@@ -39,7 +50,9 @@ const colorVariants: Record<string, string> = {
     violet: 'bg-violet-600 text-white shadow-violet-600/20',
     rose: 'bg-rose-600 text-white shadow-rose-600/20',
     sky: 'bg-sky-600 text-white shadow-sky-600/20',
-    orange: 'bg-orange-600 text-white shadow-orange-600/20'
+    orange: 'bg-orange-600 text-white shadow-orange-600/20',
+    cyan: 'bg-cyan-600 text-white shadow-cyan-600/20',
+    slate: 'bg-slate-700 text-white shadow-slate-700/20'
 };
 
 const hoverVariants: Record<string, string> = {
@@ -50,10 +63,16 @@ const hoverVariants: Record<string, string> = {
     violet: 'hover:text-violet-600 dark:hover:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/10',
     rose: 'hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/10',
     sky: 'hover:text-sky-600 dark:hover:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-900/10',
-    orange: 'hover:text-orange-600 dark:hover:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/10'
+    orange: 'hover:text-orange-600 dark:hover:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/10',
+    cyan: 'hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-cyan-900/10',
+    slate: 'hover:text-slate-600 dark:hover:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900/10'
 };
 
-export default function Sidebar() {
+interface SidebarProps {
+    className?: string;
+}
+
+export default function Sidebar({ className }: SidebarProps) {
     const pathname = usePathname();
     const logout = useAuthStore((state) => state.logout);
     const { theme, setTheme, resolvedTheme } = useTheme();
@@ -64,7 +83,7 @@ export default function Sidebar() {
     const isDark = mounted && (resolvedTheme === 'dark' || theme === 'dark');
 
     return (
-        <aside className="fixed inset-y-0 right-0 w-64 bg-card dark:bg-card border-l border-gray-100 dark:border-gray-800/40 z-50 transition-all duration-300 hidden lg:block shadow-[1px_0_15px_rgba(0,0,0,0.03)]">
+        <aside className={`fixed inset-y-0 right-0 w-64 bg-card dark:bg-card border-l border-gray-100 dark:border-gray-800/40 z-50 transition-all duration-300 hidden lg:block shadow-[1px_0_15px_rgba(0,0,0,0.03)] ${className || ''}`}>
             <div className="flex flex-col h-full p-4">
                 {/* Logo - Slightly Larger */}
                 <div className="flex items-center gap-3 mb-8 px-2 py-1">

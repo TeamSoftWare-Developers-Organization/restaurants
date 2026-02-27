@@ -12,7 +12,6 @@ interface CartItem {
 // 2. تعريف هيكل المخزن (Store) والعمليات الحسابية
 interface CartState {
     items: CartItem[];
-    taxRate: number;
 
     // العمليات (Actions)
     addItem: (product: Omit<CartItem, 'quantity'>) => void;
@@ -33,7 +32,6 @@ export const useCartStore = create<CartState>()(
     persist(
         (set, get) => ({
             items: [],
-            taxRate: 0.15, // ضريبة القيمة المضافة 15%
 
             // إضافة صنف أو زيادة الكمية إذا كان موجوداً
             addItem: (product) => {
@@ -77,12 +75,12 @@ export const useCartStore = create<CartState>()(
             getTotals: () => {
                 const items = get().items;
                 const subtotal = items.reduce((acc, item) => acc + item.price * item.quantity, 0);
-                const taxAmount = subtotal * get().taxRate;
-                const total = subtotal + taxAmount;
+                const taxAmount = 0; // تم إلغاء الضريبة نهائياً
+                const total = subtotal;
 
                 return {
                     subtotal: Number(subtotal.toFixed(2)),
-                    taxAmount: Number(taxAmount.toFixed(2)),
+                    taxAmount: 0,
                     total: Number(total.toFixed(2)),
                 };
             },

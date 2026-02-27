@@ -1,6 +1,7 @@
 # inventory/api.py
 
-from ninja import Router, Schema
+from ninja import Router, Schema, Form, File
+from ninja.files import UploadedFile
 from typing import List, Optional
 from datetime import datetime
 from django.shortcuts import get_object_or_404
@@ -29,6 +30,7 @@ class IngredientOut(Schema):
     unit: str
     cost_per_unit: float
     reorder_level: float
+    image: Optional[str] = None
     last_updated: datetime
 
 # نقاط نهاية CRUD لـ Ingredient (المكونات)
@@ -41,24 +43,29 @@ def list_ingredients(request):
     return Ingredient.objects.all()
 
 @inventory_router.post("/ingredients/", response=IngredientOut)
-def create_ingredient(request, ingredient_data: IngredientIn):
+def create_ingredient(request, ingredient_data: IngredientIn = Form(...), image: UploadedFile = File(None)):
     """
     إنشاء مكون جديد في المخزون.
     """
     try:
-        ingredient = Ingredient.objects.create(**ingredient_data.dict())
+        data = ingredient_data.dict()
+        if image:
+            data['image'] = image
+        ingredient = Ingredient.objects.create(**data)
         return ingredient
     except IntegrityError:
         return 400, {"message": "المكون موجود بالفعل."}
 
 @inventory_router.put("/ingredients/{ingredient_id}/", response=IngredientOut)
-def update_ingredient(request, ingredient_id: int, ingredient_data: IngredientIn):
+def update_ingredient(request, ingredient_id: int, ingredient_data: IngredientIn = Form(...), image: UploadedFile = File(None)):
     """
     تحديث بيانات مكون في المخزون.
     """
     ingredient = get_object_or_404(Ingredient, id=ingredient_id)
     for attr, value in ingredient_data.dict().items():
         setattr(ingredient, attr, value)
+    if image:
+        ingredient.image = image
     ingredient.save()
     return ingredient
 

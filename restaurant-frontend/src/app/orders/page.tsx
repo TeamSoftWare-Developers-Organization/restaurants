@@ -132,7 +132,7 @@ export default function OrdersPage() {
                                             {order.table_number ? `طاولة ${order.table_number}` : 'تيك أواي'}
                                         </td>
                                         <td className="px-6 py-4 font-black text-rose-600 italic">
-                                            {order.total_amount} <span className="text-[10px] not-italic mr-0.5">ج.م</span>
+                                            {order.total_amount} <span className="text-[10px] not-italic mr-0.5">د.ل</span>
                                         </td>
                                         <td className="px-6 py-4 text-gray-400 font-semibold tabular-nums text-xs">
                                             {new Date(order.order_date_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
@@ -209,7 +209,7 @@ export default function OrdersPage() {
                                             </div>
                                         </div>
                                         <div className="text-xs font-black text-gray-900 dark:text-white tabular-nums">
-                                            {(item.unit_price * item.quantity).toFixed(2)} ج.م
+                                            {(item.unit_price * item.quantity).toFixed(2)} د.ل
                                         </div>
                                     </div>
                                 ))}
@@ -219,17 +219,17 @@ export default function OrdersPage() {
                         <div className="pt-4 border-t border-gray-100 dark:border-gray-800 space-y-2">
                             <div className="flex justify-between text-xs font-bold text-gray-400">
                                 <span>المجموع الفرعي</span>
-                                <span className="tabular-nums">{(selectedOrder.total_amount + selectedOrder.discount_amount).toFixed(2)} ج.م</span>
+                                <span className="tabular-nums">{(selectedOrder.total_amount + selectedOrder.discount_amount).toFixed(2)} د.ل</span>
                             </div>
                             {selectedOrder.discount_amount > 0 && (
                                 <div className="flex justify-between text-xs font-bold text-rose-600">
                                     <span>الخصم</span>
-                                    <span className="tabular-nums">-{selectedOrder.discount_amount.toFixed(2)} ج.م</span>
+                                    <span className="tabular-nums">-{selectedOrder.discount_amount.toFixed(2)} د.ل</span>
                                 </div>
                             )}
                             <div className="flex justify-between text-lg font-black text-gray-900 dark:text-white border-t border-dashed border-gray-200 dark:border-gray-800 pt-2">
                                 <span>الإجمالي</span>
-                                <span className="tabular-nums">{selectedOrder.total_amount.toFixed(2)} ج.م</span>
+                                <span className="tabular-nums">{selectedOrder.total_amount.toFixed(2)} د.ل</span>
                             </div>
                         </div>
 

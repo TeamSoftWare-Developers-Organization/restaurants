@@ -14,6 +14,7 @@ export const metadata: Metadata = {
 };
 
 import { ThemeProvider } from "@/components";
+import { SettingsInitializer } from "@/components/SettingsInitializer";
 
 export default function RootLayout({
   children,
@@ -24,6 +25,7 @@ export default function RootLayout({
     <html lang="ar" dir="rtl" suppressHydrationWarning>
       <body className={`${cairo.variable} antialiased font-cairo`}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <SettingsInitializer />
           {children}
         </ThemeProvider>
       </body>

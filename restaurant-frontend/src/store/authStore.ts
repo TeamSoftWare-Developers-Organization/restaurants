@@ -10,15 +10,27 @@ interface User {
     role: string;
 }
 
+export interface Shift {
+    id: number;
+    cashier_id: number;
+    start_time: string;
+    end_time: string | null;
+    opening_balance: number;
+    closing_balance: number | null;
+    status: 'open' | 'closed';
+}
+
 interface AuthState {
     user: User | null;
     token: string | null;
     isLoggedIn: boolean;
     isLoading: boolean;
     error: string | null;
+    activeShift: Shift | null;
     login: (email: string, password?: string) => Promise<boolean>;
     logout: () => void;
     checkAuth: () => Promise<void>;
+    setActiveShift: (shift: Shift | null) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -29,6 +41,7 @@ export const useAuthStore = create<AuthState>()(
             isLoggedIn: false,
             isLoading: false,
             error: null,
+            activeShift: null,
             login: async (email: string, password?: string) => {
                 set({ isLoading: true, error: null });
                 try {
@@ -78,7 +91,9 @@ export const useAuthStore = create<AuthState>()(
                 } catch (err) {
                     set({ user: null, token: null, isLoggedIn: false });
                 }
-            }
+            },
+            setActiveShift: (shift) => set({ activeShift: shift }),
+            clearShift: () => set({ activeShift: null }),
         }),
         {
             name: 'auth-storage',

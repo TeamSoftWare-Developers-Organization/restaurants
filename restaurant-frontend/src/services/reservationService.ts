@@ -41,5 +41,16 @@ export const reservationService = {
     getTables: async (): Promise<Table[]> => {
         const response = await api.get('/reservations/tables/');
         return response.data;
+    },
+    createTable: async (data: Partial<Table>): Promise<Table> => {
+        const response = await api.post('/reservations/tables/', data);
+        return response.data;
+    },
+    updateTable: async (id: number, data: Partial<Table>): Promise<Table> => {
+        const response = await api.put(`/reservations/tables/${id}/`, data);
+        return response.data;
+    },
+    deleteTable: async (id: number): Promise<void> => {
+        await api.delete(`/reservations/tables/${id}/`);
     }
 };

@@ -2,6 +2,8 @@
 
 from django.contrib import admin
 from django.urls import path 
+from django.conf import settings
+from django.conf.urls.static import static
 from django.http import HttpResponse
 from ninja import NinjaAPI 
 # استيراد الـ routers من تطبيقاتنا
@@ -12,6 +14,7 @@ from menu.api import menu_router
 from inventory.api import inventory_router
 from reservations.api import reservations_router
 from payments.api import payments_router
+from core.api import core_router
 
 from ninja_extra import NinjaExtraAPI
 from ninja_jwt.controller import NinjaJWTDefaultController
@@ -30,6 +33,7 @@ api.add_router("/menu", menu_router)
 api.add_router("/inventory", inventory_router)
 api.add_router("/reservations", reservations_router)
 api.add_router("/payments", payments_router)
+api.add_router("/settings", core_router)
 
 # مثال:
 # @api.get("/hello")
@@ -129,3 +133,6 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', api.urls), # هذا هو المسار الذي سيستضيف جميع واجهات برمجة التطبيقات الخاصة بك
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -1,7 +1,10 @@
 # menu/api.py
 
-from ninja import Router, Schema
+from ninja import Router, Schema, File
+from ninja.files import UploadedFile
 from typing import List, Optional
+import os
+from django.conf import settings
 from django.shortcuts import get_object_or_404
 from django.db import IntegrityError
 from .models import Category, MenuItem
@@ -66,6 +69,26 @@ def delete_category(request, category_id: int):
     category = Category.objects.get(id=category_id)
     category.delete()
     return {"success": True}
+
+@menu_router.post("/upload-image/")
+def upload_menu_item_image(request, image: UploadedFile = File(...)):
+    """
+    رفع صورة لصنف قائمة.
+    """
+    # إنشاء مجلد الوسائط إذا لم يكن موجوداً
+    upload_path = os.path.join(settings.MEDIA_ROOT, 'menu')
+    if not os.path.exists(upload_path):
+        os.makedirs(upload_path)
+    
+    # حفظ الملف
+    file_path = os.path.join(upload_path, image.name)
+    with open(file_path, 'wb+') as destination:
+        for chunk in image.chunks():
+            destination.write(chunk)
+            
+    # إرجاع رابط الصورة
+    image_url = f"{settings.MEDIA_URL}menu/{image.name}"
+    return {"image_url": image_url}
 
 # 3. تعريف المخططات (Schemas) لـ MenuItem
 

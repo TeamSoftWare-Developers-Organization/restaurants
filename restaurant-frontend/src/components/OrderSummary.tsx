@@ -32,13 +32,9 @@ export default function OrderSummary() {
                     <span>الفرعي:</span>
                     <span className="text-gray-600 dark:text-gray-400">{subtotal.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between text-indigo-600/70 text-[11px] font-bold uppercase tracking-widest leading-none">
-                    <span>الضريبة (14%):</span>
-                    <span>{taxAmount.toFixed(2)}</span>
-                </div>
                 <div className="flex justify-between items-baseline pt-4 border-t border-gray-100 dark:border-gray-800/40 mt-3">
                     <span className="text-sm font-black text-gray-900 dark:text-white">الإجمالي النهائي:</span>
-                    <span className="text-xl font-black text-indigo-600 italic">{total.toFixed(2)} <span className="text-[10px] not-italic mr-0.5">ج.م</span></span>
+                    <span className="text-xl font-black text-indigo-600 italic">{total.toFixed(2)} <span className="text-[10px] not-italic mr-0.5">د.ل</span></span>
                 </div>
             </div>
         </div>

@@ -39,5 +39,15 @@ export const menuService = {
     },
     deleteMenuItem: async (id: number): Promise<void> => {
         await api.delete(`/menu/items/${id}/`);
+    },
+    uploadImage: async (file: File): Promise<{ image_url: string }> => {
+        const formData = new FormData();
+        formData.append('image', file);
+        const response = await api.post('/menu/upload-image/', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        });
+        return response.data;
     }
 };

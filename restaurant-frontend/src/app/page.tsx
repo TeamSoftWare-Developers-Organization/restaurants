@@ -19,7 +19,7 @@ export default function Dashboard() {
   const router = useRouter();
   const [isClient, setIsClient] = useState(false);
   const [stats, setStats] = useState([
-    { label: 'المبيعات', value: '0', unit: 'ج.م', trend: '0%', isPositive: true, icon: TrendingUp, bgColor: 'bg-emerald-500/10', iconColor: 'text-emerald-500' },
+    { label: 'المبيعات', value: '0', unit: 'د.ل', trend: '0%', isPositive: true, icon: TrendingUp, bgColor: 'bg-emerald-500/10', iconColor: 'text-emerald-500' },
     { label: 'الطلبات', value: '0', trend: '0%', isPositive: true, icon: ShoppingBag, bgColor: 'bg-indigo-500/10', iconColor: 'text-indigo-500' },
     { label: 'الموظفون', value: '0', trend: '0%', isPositive: true, icon: Users, bgColor: 'bg-blue-500/10', iconColor: 'text-blue-500' },
   ]);
@@ -44,7 +44,7 @@ export default function Dashboard() {
       const totalSales = orders.reduce((acc: number, order: any) => acc + order.total_amount, 0);
 
       setStats([
-        { label: 'المبيعات', value: totalSales.toLocaleString(), unit: 'ج.م', trend: '+0%', isPositive: true, icon: TrendingUp, bgColor: 'bg-emerald-500/10', iconColor: 'text-emerald-500' },
+        { label: 'المبيعات', value: totalSales.toLocaleString(), unit: 'د.ل', trend: '+0%', isPositive: true, icon: TrendingUp, bgColor: 'bg-emerald-500/10', iconColor: 'text-emerald-500' },
         { label: 'الطلبات', value: orders.length.toString(), trend: '+0%', isPositive: true, icon: ShoppingBag, bgColor: 'bg-indigo-500/10', iconColor: 'text-indigo-500' },
         { label: 'الموظفون', value: employees.length.toString(), trend: '0%', isPositive: true, icon: Users, bgColor: 'bg-blue-500/10', iconColor: 'text-blue-500' },
       ]);
@@ -152,7 +152,7 @@ export default function Dashboard() {
                         <td className="px-6 py-4 font-black text-gray-800 dark:text-gray-200">#{order.id}</td>
                         <td className="px-6 py-4 font-semibold text-gray-400 dark:text-gray-500">طاولة {order.table_number || '--'}</td>
                         <td className="px-6 py-4 font-black text-indigo-600 italic">
-                          {order.total_amount} <span className="text-[10px] not-italic mr-0.5">ج.م</span>
+                          {order.total_amount} <span className="text-[10px] not-italic mr-0.5">د.ل</span>
                         </td>
                         <td className="px-6 py-4">
                           <span className={`inline-flex px-2 py-1 rounded-lg text-[11px] font-black ${status.color}`}>

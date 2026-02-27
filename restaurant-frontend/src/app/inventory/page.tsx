@@ -11,7 +11,8 @@ import {
     Package,
     Activity,
     AlertTriangle,
-    Save
+    Save,
+    Image as ImageIcon
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { useRouter } from 'next/navigation';
@@ -34,6 +35,8 @@ export default function InventoryPage() {
         cost_per_unit: 0,
         reorder_level: 0
     });
+    const [imageFile, setImageFile] = useState<File | null>(null);
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
     useEffect(() => {
         setIsClient(true);
@@ -76,16 +79,26 @@ export default function InventoryPage() {
                 reorder_level: 5
             });
         }
+        setImageFile(null);
+        setPreviewUrl(item?.image ? (item.image.startsWith('http') ? item.image : `http://localhost:8000${item.image}`) : null);
         setIsModalOpen(true);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
+            const data = new FormData();
+            Object.entries(formData).forEach(([key, value]) => {
+                data.append(key, value.toString());
+            });
+            if (imageFile) {
+                data.append('image', imageFile);
+            }
+
             if (editingItem) {
-                await inventoryService.updateIngredient(editingItem.id, formData);
+                await inventoryService.updateIngredient(editingItem.id, data);
             } else {
-                await inventoryService.createIngredient(formData);
+                await inventoryService.createIngredient(data);
             }
             setIsModalOpen(false);
             fetchInventory();
@@ -150,7 +163,7 @@ export default function InventoryPage() {
                                 <tr className="bg-gray-50/30 dark:bg-gray-900/20 border-b border-gray-50 dark:border-gray-800/40">
                                     <th className="px-6 py-4 text-gray-400 font-bold text-[11px] uppercase tracking-widest leading-none">المادة</th>
                                     <th className="px-6 py-4 text-gray-400 font-bold text-[11px] uppercase tracking-widest leading-none">الكمية</th>
-                                    <th className="px-6 py-4 text-gray-400 font-bold text-[11px] uppercase tracking-widest leading-none">تكلفة الوحدة</th>
+                                    <th className="px-6 py-4 text-gray-400 font-bold text-[11px] uppercase tracking-widest leading-none">سعر تكلفة الوحدة</th>
                                     <th className="px-6 py-4 text-gray-400 font-bold text-[11px] uppercase tracking-widest leading-none">الوحدة</th>
                                     <th className="px-6 py-4 text-gray-400 font-bold text-[11px] uppercase tracking-widest leading-none">التنبيه</th>
                                     <th className="px-6 py-4 text-gray-400 font-bold text-[11px] uppercase tracking-widest leading-none">الحالة</th>
@@ -164,12 +177,27 @@ export default function InventoryPage() {
                                     const isLowStock = item.current_stock <= item.reorder_level;
                                     return (
                                         <tr key={item.id} className="hover:bg-gray-50/30 dark:hover:bg-gray-900/20 transition-colors group">
-                                            <td className="px-6 py-4 font-black text-gray-900 dark:text-gray-200">{item.name}</td>
+                                            <td className="px-6 py-4 font-black text-gray-900 dark:text-gray-200">
+                                                <div className="flex items-center gap-3">
+                                                    {item.image ? (
+                                                        <img
+                                                            src={item.image.startsWith('http') ? item.image : `http://localhost:8000${item.image}`}
+                                                            alt={item.name}
+                                                            className="w-10 h-10 rounded-xl object-cover shadow-sm group-hover:scale-110 transition-transform"
+                                                        />
+                                                    ) : (
+                                                        <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                                                            <Package className="w-5 h-5 text-gray-400 opacity-50" />
+                                                        </div>
+                                                    )}
+                                                    {item.name}
+                                                </div>
+                                            </td>
                                             <td className={`px-6 py-4 font-black tabular-nums transition-colors text-base ${isLowStock ? 'text-rose-500' : 'text-gray-900 dark:text-white'}`}>
                                                 {item.current_stock}
                                             </td>
                                             <td className="px-6 py-4 text-gray-900 dark:text-gray-200 font-bold tabular-nums">
-                                                {item.cost_per_unit} ج.م
+                                                {item.cost_per_unit} د.ل
                                             </td>
                                             <td className="px-6 py-4 text-gray-400 font-bold text-[11px] uppercase tracking-tighter">{item.unit}</td>
                                             <td className="px-6 py-4 text-gray-400 font-bold text-xs tabular-nums">{item.reorder_level}</td>
@@ -254,7 +282,7 @@ export default function InventoryPage() {
                         </div>
                     </div>
                     <div className="space-y-1">
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mr-1">تكلفة الوحدة</label>
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mr-1">سعر تكلفة الوحدة</label>
                         <input
                             type="number"
                             step="0.01"
@@ -276,6 +304,42 @@ export default function InventoryPage() {
                         />
                         <p className="text-[10px] text-gray-400 font-bold opacity-70">سيظهر تنبيه عندما تصل الكمية إلى هذا المستوى أو أقل.</p>
                     </div>
+
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mr-1">صورة المادة</label>
+                        <div className="flex items-center gap-4">
+                            <div className="relative group">
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) {
+                                            setImageFile(file);
+                                            setPreviewUrl(URL.createObjectURL(file));
+                                        }
+                                    }}
+                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                />
+                                <div className="w-20 h-20 rounded-2xl bg-gray-50 dark:bg-gray-950/40 border-2 border-dashed border-gray-100 dark:border-gray-800 flex flex-col items-center justify-center group-hover:border-amber-600/30 transition-all overflow-hidden">
+                                    {previewUrl ? (
+                                        <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <>
+                                            <ImageIcon className="w-6 h-6 text-gray-400" />
+                                            <span className="text-[8px] font-black text-gray-400 mt-1 uppercase">اختر</span>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="flex-1">
+                                <p className="text-[10px] text-gray-500 font-bold leading-relaxed">
+                                    يمكنك رفع صورة تعبيرية للمادة لتسهيل التعرف عليها بصرياً في المخزون.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
                     <button
                         type="submit"
                         className="w-full h-11 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-black shadow-lg shadow-amber-600/20 flex items-center justify-center gap-2 transition-all active:scale-95"

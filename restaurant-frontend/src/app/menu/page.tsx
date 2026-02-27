@@ -16,6 +16,9 @@ import {
 import { useAuthStore } from '@/store/authStore';
 import { useRouter } from 'next/navigation';
 import { menuService, MenuItem, Category } from '@/services/menuService';
+import { inventoryService, Ingredient, RecipeIngredient } from '@/services/inventoryService';
+import { ChefHat } from 'lucide-react';
+import { getFullUrl } from '@/lib/api';
 
 export default function MenuPage() {
     const { isLoggedIn } = useAuthStore();
@@ -35,8 +38,21 @@ export default function MenuPage() {
         category_id: undefined,
         is_available: true
     });
-    const [isAddingCategory, setIsAddingCategory] = useState(false);
     const [newCategoryName, setNewCategoryName] = useState('');
+    const [isAddingCategory, setIsAddingCategory] = useState(false);
+    const [isUploading, setIsUploading] = useState(false);
+    const [imageFile, setImageFile] = useState<File | null>(null);
+    const [imagePreview, setImagePreview] = useState<string>('');
+
+    // Recipe State
+    const [isRecipeModalOpen, setIsRecipeModalOpen] = useState(false);
+    const [selectedItemForRecipe, setSelectedItemForRecipe] = useState<MenuItem | null>(null);
+    const [recipeIngredients, setRecipeIngredients] = useState<RecipeIngredient[]>([]);
+    const [availableIngredients, setAvailableIngredients] = useState<Ingredient[]>([]);
+    const [newRecipeData, setNewRecipeData] = useState({
+        ingredient_id: 0,
+        quantity_needed: 0
+    });
 
     useEffect(() => {
         setIsClient(true);
@@ -85,21 +101,37 @@ export default function MenuPage() {
                 image_url: ''
             });
         }
+        setImageFile(null);
+        setImagePreview('');
         setIsModalOpen(true);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
+            setIsUploading(true);
+            let finalImageUrl = formData.image_url;
+
+            if (imageFile) {
+                const uploadRes = await menuService.uploadImage(imageFile);
+                finalImageUrl = uploadRes.image_url;
+            }
+
+            const payload = { ...formData, image_url: finalImageUrl };
+
             if (editingItem) {
-                await menuService.updateMenuItem(editingItem.id, formData);
+                await menuService.updateMenuItem(editingItem.id, payload);
             } else {
-                await menuService.createMenuItem(formData);
+                await menuService.createMenuItem(payload);
             }
             setIsModalOpen(false);
+            setImageFile(null);
+            setImagePreview('');
             fetchData();
         } catch (err) {
             console.error('Save failed', err);
+        } finally {
+            setIsUploading(false);
         }
     };
 
@@ -127,6 +159,49 @@ export default function MenuPage() {
         }
     };
 
+    const handleOpenRecipeModal = async (item: MenuItem) => {
+        setSelectedItemForRecipe(item);
+        try {
+            const [recipe, ingredients] = await Promise.all([
+                inventoryService.getRecipeForItem(item.id),
+                inventoryService.getIngredients()
+            ]);
+            setRecipeIngredients(recipe);
+            setAvailableIngredients(ingredients);
+            setNewRecipeData({
+                ingredient_id: ingredients[0]?.id || 0,
+                quantity_needed: 0
+            });
+            setIsRecipeModalOpen(true);
+        } catch (err) {
+            console.error('Failed to load recipe data', err);
+        }
+    };
+
+    const handleAddIngredientToRecipe = async () => {
+        if (!selectedItemForRecipe || !newRecipeData.ingredient_id || newRecipeData.quantity_needed <= 0) return;
+        try {
+            await inventoryService.addIngredientToRecipe(selectedItemForRecipe.id, newRecipeData);
+            const recipe = await inventoryService.getRecipeForItem(selectedItemForRecipe.id);
+            setRecipeIngredients(recipe);
+            setNewRecipeData({ ...newRecipeData, quantity_needed: 0 });
+        } catch (err) {
+            console.error('Failed to add ingredient to recipe', err);
+        }
+    };
+
+    const handleRemoveIngredientFromRecipe = async (id: number) => {
+        try {
+            await inventoryService.removeIngredientFromRecipe(id);
+            if (selectedItemForRecipe) {
+                const recipe = await inventoryService.getRecipeForItem(selectedItemForRecipe.id);
+                setRecipeIngredients(recipe);
+            }
+        } catch (err) {
+            console.error('Failed to remove ingredient', err);
+        }
+    };
+
     if (!isClient || !isLoggedIn) return null;
 
     return (
@@ -138,7 +213,7 @@ export default function MenuPage() {
                 <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                     <div className="flex items-center gap-4">
                         <div className="w-10 h-10 bg-violet-600 rounded-xl flex items-center justify-center shadow-lg shadow-violet-600/20">
-                            <Utensils className="text-white w-5 h-5" />
+                            <ChefHat className="text-white w-5 h-5" />
                         </div>
                         <div>
                             <h1 className="text-2xl font-black text-gray-900 dark:text-white leading-none mb-1">قائمة الطعام</h1>
@@ -186,7 +261,7 @@ export default function MenuPage() {
                                             <div className="flex items-center gap-3">
                                                 <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-xl overflow-hidden flex items-center justify-center border border-gray-100 dark:border-gray-800">
                                                     {item.image_url ? (
-                                                        <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
+                                                        <img src={getFullUrl(item.image_url)} alt={item.name} className="w-full h-full object-cover" />
                                                     ) : (
                                                         <Utensils className="w-5 h-5 text-gray-300" />
                                                     )}
@@ -200,7 +275,7 @@ export default function MenuPage() {
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 font-black text-violet-600 tabular-nums">
-                                            {item.price} <span className="text-[10px] opacity-70">ج.م</span>
+                                            {item.price} <span className="text-[10px] opacity-70">د.ل</span>
                                         </td>
                                         <td className="px-6 py-4">
                                             <span className={`inline-flex px-2 py-1 rounded-lg text-[10px] font-black ${item.is_available ? 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600' : 'bg-rose-50 dark:bg-rose-950/20 text-rose-600'}`}>
@@ -209,6 +284,13 @@ export default function MenuPage() {
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex justify-center gap-3">
+                                                <button
+                                                    onClick={() => handleOpenRecipeModal(item)}
+                                                    className="p-2 bg-amber-50/50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-400 rounded-xl hover:scale-110 transition-all border border-amber-100 dark:border-amber-900/30"
+                                                    title="إدارة المكونات"
+                                                >
+                                                    <ChefHat className="w-4 h-4" />
+                                                </button>
                                                 <button
                                                     onClick={() => handleOpenModal(item)}
                                                     className="p-2 bg-violet-50/50 dark:bg-violet-950/20 text-violet-600 dark:text-violet-400 rounded-xl hover:scale-110 transition-all border border-violet-100 dark:border-violet-900/30"
@@ -249,11 +331,14 @@ export default function MenuPage() {
                             />
                         </div>
                         <div className="space-y-1">
-                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mr-1">السعر (ج.م)</label>
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mr-1">السعر (د.ل)</label>
                             <input
                                 type="number"
-                                value={formData.price}
-                                onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) })}
+                                value={isNaN(formData.price as number) ? '' : formData.price}
+                                onChange={(e) => {
+                                    const val = parseFloat(e.target.value);
+                                    setFormData({ ...formData, price: isNaN(val) ? 0 : val });
+                                }}
                                 className="w-full h-10 bg-gray-50 dark:bg-gray-950/40 border border-gray-100 dark:border-gray-800 rounded-xl px-4 text-sm font-bold outline-none focus:ring-2 focus:ring-violet-600/10"
                                 required
                             />
@@ -306,6 +391,41 @@ export default function MenuPage() {
                         )}
                     </div>
                     <div className="space-y-1">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mr-1">صورة الصنف</label>
+                        <div className="flex items-center gap-4">
+                            <div className="w-20 h-20 bg-gray-50 dark:bg-gray-900/40 border border-gray-100 dark:border-gray-800 rounded-xl overflow-hidden flex items-center justify-center">
+                                {imagePreview || formData.image_url ? (
+                                    <img src={imagePreview || getFullUrl(formData.image_url)} alt="Preview" className="w-full h-full object-cover" />
+                                ) : (
+                                    <ImageIcon className="w-6 h-6 text-gray-300" />
+                                )}
+                            </div>
+                            <div className="flex-1">
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) {
+                                            setImageFile(file);
+                                            setImagePreview(URL.createObjectURL(file));
+                                        }
+                                    }}
+                                    className="hidden"
+                                    id="item-image"
+                                />
+                                <label
+                                    htmlFor="item-image"
+                                    className="inline-flex items-center gap-2 bg-gray-100 dark:bg-gray-950/40 text-gray-600 dark:text-gray-400 px-4 py-2 rounded-xl text-xs font-bold cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800 transition-all"
+                                >
+                                    <ImageIcon className="w-4 h-4" />
+                                    {(imagePreview || formData.image_url) ? 'تغيير الصورة' : 'اختر صورة...'}
+                                </label>
+                                <p className="text-[9px] text-gray-400 mt-1 font-bold">يفضل استخدام صور مربعة (PNG, JPG)</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="space-y-1">
                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mr-1">الوصف</label>
                         <textarea
                             value={formData.description}
@@ -325,12 +445,90 @@ export default function MenuPage() {
                     </div>
                     <button
                         type="submit"
-                        className="w-full h-11 bg-violet-600 hover:bg-violet-700 text-white rounded-xl font-black shadow-lg shadow-violet-600/20 flex items-center justify-center gap-2 transition-all active:scale-95"
+                        disabled={isUploading}
+                        className={`w-full h-11 bg-violet-600 hover:bg-violet-700 text-white rounded-xl font-black shadow-lg shadow-violet-600/20 flex items-center justify-center gap-2 transition-all active:scale-95 ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
-                        <Save className="w-4 h-4" />
-                        {editingItem ? 'حفظ التعديلات' : 'إضافة إلى القائمة'}
+                        {isUploading ? (
+                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                            <Save className="w-4 h-4" />
+                        )}
+                        {isUploading ? 'جاري الرفع...' : (editingItem ? 'حفظ التعديلات' : 'إضافة إلى القائمة')}
                     </button>
                 </form>
+            </Modal>
+
+            {/* Recipe Modal */}
+            <Modal
+                isOpen={isRecipeModalOpen}
+                onClose={() => setIsRecipeModalOpen(false)}
+                title={`إدارة مكونات: ${selectedItemForRecipe?.name}`}
+            >
+                <div className="space-y-6">
+                    {/* Add Ingredient Form */}
+                    <div className="bg-gray-50 dark:bg-gray-950/40 p-4 rounded-2xl border border-gray-100 dark:border-gray-800">
+                        <h3 className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-3">إضافة مكون للوصفة</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <div className="md:col-span-1">
+                                <select
+                                    value={newRecipeData.ingredient_id}
+                                    onChange={(e) => setNewRecipeData({ ...newRecipeData, ingredient_id: parseInt(e.target.value) })}
+                                    className="w-full h-10 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl px-3 text-xs font-bold outline-none"
+                                >
+                                    {availableIngredients.map(ing => (
+                                        <option key={ing.id} value={ing.id}>{ing.name} ({ing.unit})</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    placeholder="الكمية المطلوبة"
+                                    value={newRecipeData.quantity_needed || ''}
+                                    onChange={(e) => setNewRecipeData({ ...newRecipeData, quantity_needed: parseFloat(e.target.value) })}
+                                    className="w-full h-10 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl px-3 text-xs font-bold outline-none"
+                                />
+                            </div>
+                            <button
+                                onClick={handleAddIngredientToRecipe}
+                                className="h-10 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-black text-[10px] uppercase shadow-lg shadow-amber-600/10 active:scale-95 transition-all"
+                            >
+                                إضافة
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Current Recipe Ingredients */}
+                    <div className="space-y-2">
+                        <h3 className="text-[11px] font-black text-gray-400 uppercase tracking-widest mr-1">المكونات الحالية</h3>
+                        {recipeIngredients.length === 0 ? (
+                            <p className="text-xs text-gray-400 italic text-center py-4 bg-gray-50 dark:bg-gray-950/20 rounded-xl">لا توجد مكونات معرفة لهذه الوصفة بعد.</p>
+                        ) : (
+                            <div className="space-y-2">
+                                {recipeIngredients.map(ri => (
+                                    <div key={ri.id} className="flex items-center justify-between p-3 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl group transition-all">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 bg-amber-50 dark:bg-amber-950/20 rounded-lg flex items-center justify-center">
+                                                <ChefHat className="w-4 h-4 text-amber-600" />
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-black text-gray-900 dark:text-gray-200 leading-none mb-1">{ri.ingredient.name}</p>
+                                                <p className="text-[10px] text-gray-400 font-bold">{ri.quantity_needed} {ri.ingredient.unit}</p>
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={() => handleRemoveIngredientFromRecipe(ri.id)}
+                                            className="p-2 text-rose-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-lg transition-all"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
             </Modal>
         </div>
     );

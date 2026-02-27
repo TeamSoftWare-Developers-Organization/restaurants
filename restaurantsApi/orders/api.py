@@ -13,6 +13,8 @@ from menu.models import MenuItem     # نحتاج لاستيراد الصنف م
 from employees.api import EmployeeOut
 from menu.api import MenuItemOut, CategoryOut # CategoryOut لتمثيل الفئة ضمن MenuItemOut
 
+from ninja_jwt.authentication import JWTAuth
+
 # إنشاء موجه (Router) خاص بتطبيق orders
 order_router = Router(tags=["الطلبات"])
 
@@ -27,7 +29,7 @@ class OrderItemIn(Schema):
 # Schema لإخراج صنف طلب (يشمل تفاصيل الصنف من القائمة)
 class OrderItemOut(Schema):
     id: int
-    menu_item: MenuItemOut # هنا نعيد كائن MenuItem بالكامل
+    menu_item: Optional[MenuItemOut] = None # هنا نعيد كائن MenuItem إذا كان موجوداً
     quantity: int
     unit_price: float # يفضل DecimalField في الموديل لكن float مناسب للـ API
     notes: Optional[str] = None
@@ -57,7 +59,7 @@ class OrderOut(Schema):
 
 # 3. تعريف نقاط نهاية API لـ Order
 
-@order_router.get("/", response=List[OrderOut])
+@order_router.get("/", response=List[OrderOut], auth=JWTAuth())
 def list_orders(request):
     """
     جلب قائمة بجميع الطلبات.
@@ -65,7 +67,7 @@ def list_orders(request):
     orders = Order.objects.all()
     return orders
 
-@order_router.post("/", response={200: OrderOut, 500: dict})
+@order_router.post("/", response={200: OrderOut, 400: dict, 500: dict}, auth=JWTAuth())
 def create_order(request, order_data: OrderIn):
     """
     إنشاء طلب جديد وإضافة أصناف إليه.
@@ -74,9 +76,18 @@ def create_order(request, order_data: OrderIn):
         # Debugging: Log the incoming data
         print(f"DEBUG: Incoming Order Data: {order_data.dict()}")
         
+        # التحقق من وجود وردية مفتوحة للكاشير/الموظف
+        from payments.models import Shift
+        current_shift = Shift.objects.filter(cashier=request.auth, status='open').first()
+        if not current_shift:
+            return 400, {"message": "يرجى فتح وردية أولاً قبل البدء في المبيعات."}
+
         employee = None
         if order_data.employee_id:
             employee = get_object_or_404(Employee, id=order_data.employee_id)
+        else:
+            # محاولة ربط الطلب بالموظف الحالي تلقائياً
+            employee = Employee.objects.filter(user=request.auth).first()
 
         order = Order.objects.create(
             employee=employee,
@@ -103,7 +114,7 @@ def create_order(request, order_data: OrderIn):
         print("Backend Error:", error_detail)
         return 500, {"message": str(e), "detail": error_detail}
 
-@order_router.get("/{order_id}", response=OrderOut)
+@order_router.get("/{order_id}", response=OrderOut, auth=JWTAuth())
 def get_order(request, order_id: int):
     """
     جلب تفاصيل طلب محدد.
@@ -111,7 +122,7 @@ def get_order(request, order_id: int):
     order = get_object_or_404(Order, id=order_id)
     return order
 
-@order_router.put("/{order_id}", response=OrderOut)
+@order_router.put("/{order_id}", response=OrderOut, auth=JWTAuth())
 def update_order(request, order_id: int, order_data: OrderIn):
     """
     تحديث طلب موجود.
@@ -138,7 +149,7 @@ def update_order(request, order_id: int, order_data: OrderIn):
     order.calculate_total() # إعادة حساب الإجمالي بعد التحديث
     return order
 
-@order_router.delete("/{order_id}")
+@order_router.delete("/{order_id}", auth=JWTAuth())
 def delete_order(request, order_id: int):
     """
     حذف طلب محدد.
@@ -149,7 +160,7 @@ def delete_order(request, order_id: int):
 
 # 4. تعريف نقاط نهاية API لـ OrderItem (للتحكم الفردي في أصناف الطلبات)
 
-@order_router.post("/{order_id}/items", response=OrderItemOut)
+@order_router.post("/{order_id}/items", response=OrderItemOut, auth=JWTAuth())
 def add_item_to_order(request, order_id: int, item_data: OrderItemIn):
     """
     إضافة صنف جديد إلى طلب موجود.
@@ -166,7 +177,7 @@ def add_item_to_order(request, order_id: int, item_data: OrderItemIn):
     order.calculate_total() # إعادة حساب إجمالي الطلب
     return order_item
 
-@order_router.put("/items/{order_item_id}", response=OrderItemOut)
+@order_router.put("/items/{order_item_id}", response=OrderItemOut, auth=JWTAuth())
 def update_order_item(request, order_item_id: int, item_data: OrderItemIn):
     """
     تحديث صنف طلب موجود.
@@ -187,7 +198,7 @@ def update_order_item(request, order_item_id: int, item_data: OrderItemIn):
     order_item.order.calculate_total() # إعادة حساب إجمالي الطلب الرئيسي
     return order_item
 
-@order_router.delete("/items/{order_item_id}")
+@order_router.delete("/items/{order_item_id}", auth=JWTAuth())
 def delete_order_item(request, order_item_id: int):
     """
     حذف صنف طلب محدد.

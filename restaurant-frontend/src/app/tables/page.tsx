@@ -14,10 +14,12 @@ import {
     AlertCircle
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
+import { useUIStore } from '@/store/uiStore';
 import { useRouter } from 'next/navigation';
 import { reservationService, Table } from '@/services/reservationService';
 
 export default function TablesPage() {
+    const { isSidebarCollapsed } = useUIStore();
     const { isLoggedIn } = useAuthStore();
     const router = useRouter();
     const [isClient, setIsClient] = useState(false);
@@ -97,7 +99,7 @@ export default function TablesPage() {
         <div className="flex bg-background dark:bg-background min-h-screen transition-colors duration-300" dir="rtl">
             <Sidebar />
 
-            <main className="flex-1 lg:pr-80 min-h-screen p-6 lg:p-8 transition-all">
+            <main className={`flex-1 ${isSidebarCollapsed ? 'lg:pr-20' : 'lg:pr-80'} min-h-screen p-6 lg:p-8 transition-all duration-300`}>
                 {/* Header */}
                 <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                     <div className="flex items-center gap-4">

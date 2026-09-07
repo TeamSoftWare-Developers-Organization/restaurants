@@ -15,8 +15,10 @@ import {
 } from 'lucide-react';
 import { employeeService, Employee } from '@/services/employeeService';
 import { treasuryService } from '@/services/treasuryService';
+import { useUIStore } from '@/store/uiStore';
 
 export default function SalariesPage() {
+    const { isSidebarCollapsed } = useUIStore();
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [salaryHistory, setSalaryHistory] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -83,7 +85,7 @@ export default function SalariesPage() {
         <div className="flex bg-gray-50 dark:bg-background min-h-screen transition-colors duration-300" dir="rtl">
             <Sidebar />
 
-            <main className="flex-1 lg:pr-80 min-h-screen p-6 lg:p-8 transition-all">
+            <main className={`flex-1 ${isSidebarCollapsed ? 'lg:pr-20' : 'lg:pr-80'} min-h-screen p-6 lg:p-8 transition-all duration-300`}>
                 <header className="flex items-center justify-between mb-8">
                     <div className="flex items-center gap-4">
                         <div className="w-12 h-12 bg-emerald-600 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-600/20">

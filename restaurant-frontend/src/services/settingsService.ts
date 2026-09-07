@@ -8,7 +8,8 @@ export interface RestaurantSettings {
     currency: string;
     tax_rate: number;
     invoice_footer_message?: string;
-    is_online_ordering_enabled: boolean;
+    is_delivery_enabled: boolean;
+    default_delivery_fee: number;
 }
 
 export const settingsService = {

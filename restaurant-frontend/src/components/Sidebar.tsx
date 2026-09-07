@@ -16,15 +16,19 @@ import {
     Sun,
     LogOut,
     ChevronLeft,
+    ChevronRight,
     User,
     ShoppingBag,
     Table as TableIcon,
     Wallet,
     ReceiptText,
     Banknote,
-    Settings
+    Settings,
+    Menu as MenuIcon,
+    ArrowRightLeft
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
+import { useUIStore } from '@/store/uiStore';
 
 const links = [
     { label: 'لوحة التحكم', icon: Home, href: '/', color: 'indigo' },
@@ -75,6 +79,7 @@ interface SidebarProps {
 export default function Sidebar({ className }: SidebarProps) {
     const pathname = usePathname();
     const logout = useAuthStore((state) => state.logout);
+    const { isSidebarCollapsed, toggleSidebar } = useUIStore();
     const { theme, setTheme, resolvedTheme } = useTheme();
     const [mounted, setMounted] = useState(false);
 
@@ -83,57 +88,101 @@ export default function Sidebar({ className }: SidebarProps) {
     const isDark = mounted && (resolvedTheme === 'dark' || theme === 'dark');
 
     return (
-        <aside className={`fixed inset-y-0 right-0 w-64 bg-card dark:bg-card border-l border-gray-100 dark:border-gray-800/40 z-50 transition-all duration-300 hidden lg:block shadow-[1px_0_15px_rgba(0,0,0,0.03)] ${className || ''}`}>
-            <div className="flex flex-col h-full p-4">
-                {/* Logo - Slightly Larger */}
-                <div className="flex items-center gap-3 mb-8 px-2 py-1">
-                    <div className="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-600/20 rotate-3">
-                        <LayoutDashboard className="w-5 h-5 text-white" />
-                    </div>
-                    <div>
-                        <h1 className="text-[15px] font-black text-gray-900 dark:text-white leading-tight">إدارة المطعم</h1>
-                        <span className="text-[9px] text-gray-400 font-bold uppercase tracking-widest block -mt-0.5 opacity-60">نظام متكامل</span>
+        <aside
+            className={`fixed inset-y-0 right-0 ${isSidebarCollapsed ? 'w-20' : 'w-64'} bg-card dark:bg-card border-l border-gray-100 dark:border-gray-800/40 z-50 transition-all duration-300 hidden lg:block shadow-[1px_0_15px_rgba(0,0,0,0.03)] ${className || ''}`}
+        >
+            <div className="flex flex-col h-full overflow-hidden">
+                {/* Header with Toggle */}
+                <div className="flex items-center justify-between p-4 mb-4">
+                    <div className="flex items-center gap-3 overflow-hidden">
+                        <div className="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-600/20 rotate-3 shrink-0">
+                            <LayoutDashboard className="w-5 h-5 text-white" />
+                        </div>
+                        {!isSidebarCollapsed && (
+                            <div className="animate-in fade-in slide-in-from-right-2 duration-300">
+                                <h1 className="text-[15px] font-black text-gray-900 dark:text-white leading-tight">إدارة المطعم</h1>
+                                <span className="text-[9px] text-gray-400 font-bold uppercase tracking-widest block -mt-0.5 opacity-60">نظام متكامل</span>
+                            </div>
+                        )}
                     </div>
                 </div>
 
-                {/* Navigation - Comfortable spacing */}
-                <nav className="flex-1 space-y-1">
-                    {links.map((link) => {
-                        const Icon = link.icon;
-                        const isActive = pathname === link.href || (link.href === '/stock' && pathname === '/');
+                {/* Toggle Button - Floating */}
+                <button
+                    onClick={toggleSidebar}
+                    className="absolute -left-3 top-20 w-6 h-6 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-full flex items-center justify-center shadow-sm hover:shadow-md transition-all text-gray-400 hover:text-indigo-600 z-50"
+                >
+                    {isSidebarCollapsed ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                </button>
 
-                        return (
-                            <Link
-                                key={link.href}
-                                href={link.href}
-                                className={`flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-300 group ${isActive
-                                    ? `${colorVariants[link.color]} shadow-md font-bold scale-[1.02]`
-                                    : `text-gray-500 ${hoverVariants[link.color]} font-semibold`
-                                    }`}
-                            >
-                                <Icon className={`w-4 h-4 transition-transform ${isActive ? 'scale-110' : 'group-hover:scale-110'}`} />
-                                <span className="text-[13px]">{link.label}</span>
-                                {isActive && <ChevronLeft className="mr-auto w-3 h-3 opacity-60" />}
-                            </Link>
-                        );
-                    })}
-                </nav>
+                {/* Navigation - Scrollable Area */}
+                <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-2 scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-gray-800 scrollbar-track-transparent">
+                    <nav className="space-y-1">
+                        {links.map((link) => {
+                            const Icon = link.icon;
+                            const isActive = pathname === link.href || (link.href === '/stock' && pathname === '/');
+
+                            return (
+                                <Link
+                                    key={link.href}
+                                    href={link.href}
+                                    title={isSidebarCollapsed ? link.label : ''}
+                                    className={`flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 rounded-xl transition-all duration-300 group relative ${isActive
+                                        ? `${colorVariants[link.color]} shadow-md font-bold scale-[1.02]`
+                                        : `text-gray-500 ${hoverVariants[link.color]} font-semibold`
+                                        }`}
+                                >
+                                    <Icon className={`w-5 h-5 shrink-0 transition-transform ${isActive ? 'scale-110' : 'group-hover:scale-110'}`} />
+                                    {!isSidebarCollapsed && (
+                                        <span className="text-[13px] whitespace-nowrap animate-in fade-in slide-in-from-right-1">{link.label}</span>
+                                    )}
+                                    {isActive && !isSidebarCollapsed && (
+                                        <ChevronLeft className="mr-auto w-3 h-3 opacity-60" />
+                                    )}
+
+                                    {/* Tooltip for collapsed mode */}
+                                    {isSidebarCollapsed && (
+                                        <div className="absolute right-full mr-2 px-2 py-1 bg-gray-900 text-white text-[10px] rounded-md opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">
+                                            {link.label}
+                                        </div>
+                                    )}
+                                </Link>
+                            );
+                        })}
+                    </nav>
+                </div>
 
                 {/* Bottom Actions */}
-                <div className="mt-auto pt-4 space-y-1 border-t border-gray-100 dark:border-gray-800/30">
+                <div className="p-4 mt-auto space-y-1 border-t border-gray-100 dark:border-gray-800/30">
                     <button
                         onClick={() => setTheme(isDark ? 'light' : 'dark')}
-                        className="flex items-center gap-3 w-full px-3 py-2 rounded-xl text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-900/40 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all font-semibold"
+                        className={`flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'} w-full px-3 py-2 rounded-xl text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-900/40 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all font-semibold group relative`}
+                        title={isSidebarCollapsed ? (isDark ? 'الوضع النهاري' : 'الوضع الليلي') : ''}
                     >
-                        {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-                        <span className="text-[13px]">{isDark ? 'الوضع النهاري' : 'الوضع الليلي'}</span>
+                        {isDark ? <Sun className="w-5 h-5 shrink-0" /> : <Moon className="w-5 h-5 shrink-0" />}
+                        {!isSidebarCollapsed && (
+                            <span className="text-[13px] whitespace-nowrap animate-in fade-in slide-in-from-right-1">{isDark ? 'الوضع النهاري' : 'الوضع الليلي'}</span>
+                        )}
+                        {isSidebarCollapsed && (
+                            <div className="absolute right-full mr-2 px-2 py-1 bg-gray-900 text-white text-[10px] rounded-md opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">
+                                {isDark ? 'الوضع النهاري' : 'الوضع الليلي'}
+                            </div>
+                        )}
                     </button>
                     <button
                         onClick={logout}
-                        className="flex items-center gap-3 w-full px-3 py-2 rounded-xl text-rose-500/80 hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-all font-bold"
+                        className={`flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'} w-full px-3 py-2 rounded-xl text-rose-500/80 hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-all font-bold group relative`}
+                        title={isSidebarCollapsed ? 'تسجيل الخروج' : ''}
                     >
-                        <LogOut className="w-4 h-4" />
-                        <span className="text-[13px]">تسجيل الخروج</span>
+                        <LogOut className="w-5 h-5 shrink-0" />
+                        {!isSidebarCollapsed && (
+                            <span className="text-[13px] whitespace-nowrap animate-in fade-in slide-in-from-right-1">تسجيل الخروج</span>
+                        )}
+                        {isSidebarCollapsed && (
+                            <div className="absolute right-full mr-2 px-2 py-1 bg-rose-600 text-white text-[10px] rounded-md opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">
+                                تسجيل الخروج
+                            </div>
+                        )}
                     </button>
                 </div>
             </div>

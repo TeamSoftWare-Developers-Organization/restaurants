@@ -12,7 +12,8 @@ class RestaurantSettingsSchema(Schema):
     currency: str
     tax_rate: float
     invoice_footer_message: Optional[str] = None
-    is_online_ordering_enabled: bool
+    is_delivery_enabled: bool
+    default_delivery_fee: float
 
 @core_router.get("/", response=RestaurantSettingsSchema)
 def get_settings(request):

@@ -12,9 +12,11 @@ import {
     Calendar,
     Filter
 } from 'lucide-react';
+import { useUIStore } from '@/store/uiStore';
 import { treasuryService, TreasuryTransaction } from '@/services/treasuryService';
 
 export default function TreasuryPage() {
+    const { isSidebarCollapsed } = useUIStore();
     const [summary, setSummary] = useState<any>(null);
     const [transactions, setTransactions] = useState<TreasuryTransaction[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -43,7 +45,7 @@ export default function TreasuryPage() {
         return (
             <div className="flex bg-background min-h-screen" dir="rtl">
                 <Sidebar />
-                <main className="flex-1 lg:pr-80 p-8 flex items-center justify-center">
+                <main className={`flex-1 ${isSidebarCollapsed ? 'lg:pr-20' : 'lg:pr-80'} p-8 flex items-center justify-center transition-all duration-300`}>
                     <div className="w-10 h-10 border-4 border-indigo-600/20 border-t-indigo-600 rounded-full animate-spin" />
                 </main>
             </div>
@@ -66,7 +68,7 @@ export default function TreasuryPage() {
         <div className="flex bg-gray-50 dark:bg-background min-h-screen transition-colors duration-300" dir="rtl">
             <Sidebar />
 
-            <main className="flex-1 lg:pr-80 min-h-screen p-6 lg:p-8 transition-all">
+            <main className={`flex-1 ${isSidebarCollapsed ? 'lg:pr-20' : 'lg:pr-80'} min-h-screen p-6 lg:p-8 transition-all duration-300`}>
                 <header className="flex items-center justify-between mb-8">
                     <div className="flex items-center gap-4">
                         <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-600/20">

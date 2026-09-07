@@ -25,8 +25,10 @@ import { paymentService } from '@/services/paymentService';
 import { reservationService, Table } from '@/services/reservationService';
 import { treasuryService } from '@/services/treasuryService';
 import { getFullUrl } from '@/lib/api';
+import { useUIStore } from '@/store/uiStore';
 
 export default function POSPage() {
+    const { isSidebarCollapsed } = useUIStore();
     const { isLoggedIn } = useAuthStore();
     const { items, addItem, removeItem, updateQuantity, clearCart, getTotals } = useCartStore();
     const router = useRouter();
@@ -141,7 +143,7 @@ export default function POSPage() {
             `}</style>
             <Sidebar className="no-print" />
 
-            <main className="flex-1 lg:pr-80 min-h-screen flex flex-col xl:flex-row gap-6 p-6 lg:p-8 transition-all">
+            <main className={`flex-1 ${isSidebarCollapsed ? 'lg:pr-20' : 'lg:pr-80'} min-h-screen flex flex-col xl:flex-row gap-6 p-6 lg:p-8 transition-all duration-300`}>
                 {/* Menu Section */}
                 <section className="flex-1 space-y-6">
                     <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">

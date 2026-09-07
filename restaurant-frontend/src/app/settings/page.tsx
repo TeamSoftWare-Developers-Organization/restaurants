@@ -19,9 +19,11 @@ import {
 } from 'lucide-react';
 import Sidebar from '@/components/Sidebar';
 import { useSettingsStore } from '@/store/settingsStore';
+import { useUIStore } from '@/store/uiStore';
 import { RestaurantSettings } from '@/services/settingsService';
 
 export default function SettingsPage() {
+    const { isSidebarCollapsed } = useUIStore();
     const {
         settings,
         loading,
@@ -75,7 +77,7 @@ export default function SettingsPage() {
         return (
             <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900" dir="rtl">
                 <Sidebar />
-                <main className="flex-1 lg:mr-64 p-8 flex items-center justify-center">
+                <main className={`flex-1 ${isSidebarCollapsed ? 'lg:mr-20' : 'lg:mr-64'} p-8 flex items-center justify-center transition-all duration-300`}>
                     <div className="flex flex-col items-center gap-4">
                         <RefreshCcw className="w-10 h-10 text-indigo-600 animate-spin" />
                         <p className="text-gray-500 font-bold">جاري تحميل الإعدادات...</p>
@@ -89,7 +91,7 @@ export default function SettingsPage() {
         <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900" dir="rtl">
             <Sidebar />
 
-            <main className="flex-1 lg:mr-64 p-4 lg:p-8">
+            <main className={`flex-1 ${isSidebarCollapsed ? 'lg:mr-20' : 'lg:mr-64'} p-4 lg:p-8 transition-all duration-300`}>
                 <div className="max-w-4xl mx-auto">
                     {/* Header */}
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
@@ -254,23 +256,37 @@ export default function SettingsPage() {
                                     />
                                 </div>
 
-                                <div className="flex items-center justify-between p-6 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm transition-all hover:shadow-md">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm transition-all hover:shadow-md">
                                     <div className="flex items-center gap-4">
-                                        <div className={`w-12 h-12 rounded-full flex items-center justify-center ${localSettings?.is_online_ordering_enabled ? 'bg-emerald-100 text-emerald-600' : 'bg-gray-100 text-gray-400'}`}>
+                                        <div className={`w-12 h-12 rounded-full flex items-center justify-center ${localSettings?.is_delivery_enabled ? 'bg-emerald-100 text-emerald-600' : 'bg-gray-100 text-gray-400'}`}>
                                             <Globe className="w-6 h-6" />
                                         </div>
                                         <div>
-                                            <h3 className="font-black text-gray-900 dark:text-white">تفعيل الطلبات الأونلاين</h3>
-                                            <p className="text-xs text-gray-500 font-medium">إتاحة استقبال الطلبات من خلال الموقع الإلكتروني</p>
+                                            <h3 className="font-black text-gray-900 dark:text-white">تفعيل خدمة التوصيل</h3>
+                                            <p className="text-xs text-gray-500 font-medium">إتاحة خيار التوصيل في صفحة نقطة البيع</p>
                                         </div>
                                     </div>
-                                    <button
-                                        type="button"
-                                        onClick={() => handleChange('is_online_ordering_enabled', !localSettings?.is_online_ordering_enabled)}
-                                        className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none ${localSettings?.is_online_ordering_enabled ? 'bg-indigo-600' : 'bg-gray-300'}`}
-                                    >
-                                        <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${localSettings?.is_online_ordering_enabled ? '-translate-x-6' : '-translate-x-1'}`} />
-                                    </button>
+                                    <div className="flex items-center justify-end gap-6">
+                                        {localSettings?.is_delivery_enabled && (
+                                            <div className="flex flex-col gap-1 items-end">
+                                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">رسوم التوصيل الافتراضية</label>
+                                                <input
+                                                    type="number"
+                                                    step="0.01"
+                                                    value={localSettings?.default_delivery_fee || 0}
+                                                    onChange={(e) => handleChange('default_delivery_fee', parseFloat(e.target.value))}
+                                                    className="w-24 h-9 px-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all font-bold text-sm text-left"
+                                                />
+                                            </div>
+                                        )}
+                                        <button
+                                            type="button"
+                                            onClick={() => handleChange('is_delivery_enabled', !localSettings?.is_delivery_enabled)}
+                                            className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none ${localSettings?.is_delivery_enabled ? 'bg-indigo-600' : 'bg-gray-300'}`}
+                                        >
+                                            <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${localSettings?.is_delivery_enabled ? '-translate-x-6' : '-translate-x-1'}`} />
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         )}

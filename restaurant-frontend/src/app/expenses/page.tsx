@@ -14,8 +14,10 @@ import {
     Banknote
 } from 'lucide-react';
 import { treasuryService, TreasuryTransaction } from '@/services/treasuryService';
+import { useUIStore } from '@/store/uiStore';
 
 export default function ExpensesPage() {
+    const { isSidebarCollapsed } = useUIStore();
     const [expenses, setExpenses] = useState<TreasuryTransaction[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [showAddModal, setShowAddModal] = useState(false);
@@ -76,7 +78,7 @@ export default function ExpensesPage() {
         <div className="flex bg-gray-50 dark:bg-background min-h-screen transition-colors duration-300" dir="rtl">
             <Sidebar />
 
-            <main className="flex-1 lg:pr-80 min-h-screen p-6 lg:p-8 transition-all">
+            <main className={`flex-1 ${isSidebarCollapsed ? 'lg:pr-20' : 'lg:pr-80'} min-h-screen p-6 lg:p-8 transition-all duration-300`}>
                 <header className="flex items-center justify-between mb-8">
                     <div className="flex items-center gap-4">
                         <div className="w-12 h-12 bg-rose-600 rounded-2xl flex items-center justify-center shadow-lg shadow-rose-600/20">
@@ -127,8 +129,8 @@ export default function ExpensesPage() {
                                         </td>
                                         <td className="px-6 py-4">
                                             <span className={`px-2 py-1 rounded-lg text-[10px] font-black ${e.reference_type === 'general_expense'
-                                                    ? 'bg-rose-100 text-rose-700'
-                                                    : 'bg-amber-100 text-amber-700'
+                                                ? 'bg-rose-100 text-rose-700'
+                                                : 'bg-amber-100 text-amber-700'
                                                 }`}>
                                                 {e.reference_type === 'general_expense' ? 'مصروف عام' : 'مصروف وردية'}
                                             </span>

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Sidebar, Modal } from '@/components';
+import { Sidebar, Modal, DeleteConfirmModal } from '@/components';
 import {
     Plus,
     Search,
@@ -39,6 +39,15 @@ export default function InventoryPage() {
     });
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+    const [deleteModal, setDeleteModal] = useState<{
+        isOpen: boolean;
+        item: Ingredient | null;
+        isLoading: boolean;
+    }>({
+        isOpen: false,
+        item: null,
+        isLoading: false
+    });
 
     useEffect(() => {
         setIsClient(true);
@@ -109,14 +118,24 @@ export default function InventoryPage() {
         }
     };
 
-    const handleDelete = async (id: number) => {
-        if (confirm('هل أنت متأكد من حذف هذه المادة؟')) {
-            try {
-                await inventoryService.deleteIngredient(id);
-                fetchInventory();
-            } catch (err) {
-                console.error('Delete failed', err);
-            }
+    const handleOpenDelete = (item: Ingredient) => {
+        setDeleteModal({
+            isOpen: true,
+            item,
+            isLoading: false
+        });
+    };
+
+    const handleConfirmDelete = async () => {
+        if (!deleteModal.item) return;
+        setDeleteModal(prev => ({ ...prev, isLoading: true }));
+        try {
+            await inventoryService.deleteIngredient(deleteModal.item.id);
+            setDeleteModal({ isOpen: false, item: null, isLoading: false });
+            fetchInventory();
+        } catch (err) {
+            console.error('Delete failed', err);
+            setDeleteModal(prev => ({ ...prev, isLoading: false }));
         }
     };
 
@@ -225,7 +244,7 @@ export default function InventoryPage() {
                                                         <Pencil className="w-4 h-4" />
                                                     </button>
                                                     <button
-                                                        onClick={() => handleDelete(item.id)}
+                                                        onClick={() => handleOpenDelete(item)}
                                                         className="p-2 bg-rose-50/50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 rounded-xl hover:scale-110 transition-all border border-rose-100 dark:border-rose-900/30"
                                                     >
                                                         <Trash2 className="w-4 h-4" />
@@ -245,6 +264,7 @@ export default function InventoryPage() {
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 title={editingItem ? 'تعديل مادة' : 'إضافة مادة جديدة'}
+                size="lg"
             >
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="space-y-1">
@@ -283,29 +303,31 @@ export default function InventoryPage() {
                             </select>
                         </div>
                     </div>
-                    <div className="space-y-1">
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mr-1">سعر تكلفة الوحدة</label>
-                        <input
-                            type="number"
-                            step="0.01"
-                            value={formData.cost_per_unit}
-                            onChange={(e) => setFormData({ ...formData, cost_per_unit: parseFloat(e.target.value) })}
-                            className="w-full h-10 bg-gray-50 dark:bg-gray-950/40 border border-gray-100 dark:border-gray-800 rounded-xl px-4 text-sm font-bold outline-none focus:ring-2 focus:ring-amber-600/10"
-                            required
-                        />
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mr-1">سعر تكلفة الوحدة</label>
+                            <input
+                                type="number"
+                                step="0.01"
+                                value={formData.cost_per_unit}
+                                onChange={(e) => setFormData({ ...formData, cost_per_unit: parseFloat(e.target.value) })}
+                                className="w-full h-10 bg-gray-50 dark:bg-gray-950/40 border border-gray-100 dark:border-gray-800 rounded-xl px-4 text-sm font-bold outline-none focus:ring-2 focus:ring-amber-600/10"
+                                required
+                            />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mr-1">مستوى إعادة الطلب</label>
+                            <input
+                                type="number"
+                                step="0.1"
+                                value={formData.reorder_level}
+                                onChange={(e) => setFormData({ ...formData, reorder_level: parseFloat(e.target.value) })}
+                                className="w-full h-10 bg-gray-50 dark:bg-gray-950/40 border border-gray-100 dark:border-gray-800 rounded-xl px-4 text-sm font-bold outline-none focus:ring-2 focus:ring-amber-600/10"
+                                required
+                            />
+                        </div>
                     </div>
-                    <div className="space-y-1">
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mr-1">مستوى إعادة الطلب</label>
-                        <input
-                            type="number"
-                            step="0.1"
-                            value={formData.reorder_level}
-                            onChange={(e) => setFormData({ ...formData, reorder_level: parseFloat(e.target.value) })}
-                            className="w-full h-10 bg-gray-50 dark:bg-gray-950/40 border border-gray-100 dark:border-gray-800 rounded-xl px-4 text-sm font-bold outline-none focus:ring-2 focus:ring-amber-600/10"
-                            required
-                        />
-                        <p className="text-[10px] text-gray-400 font-bold opacity-70">سيظهر تنبيه عندما تصل الكمية إلى هذا المستوى أو أقل.</p>
-                    </div>
+                    <p className="text-[10px] text-gray-400 font-bold opacity-70 -mt-2">سيظهر تنبيه عندما تصل الكمية إلى هذا المستوى أو أقل.</p>
 
                     <div className="space-y-1">
                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mr-1">صورة المادة</label>
@@ -351,6 +373,14 @@ export default function InventoryPage() {
                     </button>
                 </form>
             </Modal>
+
+            <DeleteConfirmModal
+                isOpen={deleteModal.isOpen}
+                onClose={() => setDeleteModal({ isOpen: false, item: null, isLoading: false })}
+                onConfirm={handleConfirmDelete}
+                itemName={deleteModal.item?.name}
+                isLoading={deleteModal.isLoading}
+            />
         </div>
     );
 }

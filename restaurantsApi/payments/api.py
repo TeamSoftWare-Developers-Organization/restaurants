@@ -13,56 +13,7 @@ from employees.models import Employee
 from ninja_jwt.authentication import JWTAuth
 from django.utils import timezone
 
-class DebugAuth(JWTAuth):
-    def authenticate(self, request, token):
-        print("\n--- 🔒 DEBUG AUTH START ---")
-        print(f"URL: {request.path}")
-        print(f"Server Time (UTC): {timezone.now()}")
-        print(f"Token: {token[:15]}...")
-        
-        try:
-            from django.contrib.auth.models import User
-            from ninja_jwt.tokens import AccessToken
-            
-            # 1. Loopback test
-            test_user = User.objects.first()
-            if test_user:
-                test_token = str(AccessToken.for_user(test_user))
-                try:
-                    at = AccessToken(test_token)
-                    print(f"✅ Loopback Success: Decoded test token exp: {at.payload['exp']}")
-                except Exception as e_loop:
-                    print(f"❌ Loopback FAILURE: {str(e_loop)}")
 
-            # 2. Incoming Token Test
-            import jwt
-            try:
-                # Unverified decode to see what's inside
-                unverified_payload = jwt.decode(token, options={"verify_signature": False})
-                print(f"📦 Token Payload: {unverified_payload}")
-                
-                exp = unverified_payload.get('exp')
-                if exp:
-                    exp_time = datetime.fromtimestamp(exp, tz=timezone.utc)
-                    print(f"⏰ Token Expires: {exp_time}")
-                    print(f"⏳ Time remaining: {exp_time - timezone.now()}")
-                
-                decoded = AccessToken(token)
-                print(f"✅ Manual AccessToken Success! User: {decoded.payload.get('user_id')}")
-            except Exception as e_manual:
-                print(f"❌ Manual Decode Failure: {str(e_manual)}")
-
-            user = super().authenticate(request, token)
-            if user:
-                print(f"✅ Django Success: {user.username}")
-            else:
-                print("❌ Django Failure: JWTAuth returned None")
-            print("--- 🔒 DEBUG AUTH END ---\n")
-            return user
-        except Exception as e:
-            print(f"💥 EXCEPTION: {type(e).__name__}: {str(e)}")
-            print("--- 🔒 DEBUG AUTH END ---\n")
-            return None
 
 # إنشاء موجه (Router) خاص بتطبيق payments
 payments_router = Router(tags=["المدفوعات"])
@@ -250,7 +201,7 @@ def list_shift_transactions(request, shift_id: int):
 
 # --- نقاط النهاية الجديدة للنظام المالي ---
 
-@payments_router.get("/treasury/summary", response=TreasurySummaryOut, auth=DebugAuth())
+@payments_router.get("/treasury/summary", response=TreasurySummaryOut, auth=JWTAuth())
 def get_treasury_summary(request):
     """
     ملخص مالي عام للخزينة.
@@ -271,13 +222,11 @@ def get_treasury_summary(request):
         "total_salaries": float(salaries)
     }
 
-@payments_router.get("/transactions/general", response=List[TreasuryTransactionOut], auth=DebugAuth())
+@payments_router.get("/transactions/general", response=List[TreasuryTransactionOut], auth=JWTAuth())
 def list_general_transactions(request):
     """
     عرض جميع الحركات المالية (العامة والورديات).
     """
-    auth_header = request.headers.get('Authorization')
-    print(f"🔍 DEBUG: /transactions/general hit! Auth Header: {auth_header[:30] if auth_header else 'None'}...")
     return TreasuryTransaction.objects.all()
 
 @payments_router.post("/transactions/general-expense", response=TreasuryTransactionOut, auth=JWTAuth())
@@ -294,14 +243,14 @@ def record_general_expense(request, data: TreasuryTransactionIn):
     )
     return transaction
 
-@payments_router.get("/salaries", response=List[SalaryPaymentOut], auth=DebugAuth())
+@payments_router.get("/salaries", response=List[SalaryPaymentOut], auth=JWTAuth())
 def list_salaries(request):
     """
     عرض سجل صرف المرتبات.
     """
     return SalaryPayment.objects.all()
 
-@payments_router.post("/salaries", response=SalaryPaymentOut, auth=DebugAuth())
+@payments_router.post("/salaries", response=SalaryPaymentOut, auth=JWTAuth())
 def record_salary_payment(request, data: SalaryPaymentIn):
     """
     تسجيل صرف مرتب لموظف.

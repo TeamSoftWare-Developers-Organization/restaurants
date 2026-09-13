@@ -9,7 +9,7 @@ from django.http import HttpRequest
 from django.db import IntegrityError
 from django.contrib.auth.models import User
 from ninja_jwt.authentication import JWTAuth
-from ninja_jwt.tokens import RefreshToken
+from ninja_jwt.tokens import RefreshToken, AccessToken
 
 auth_router = Router(tags=["المصادقة والأمان"])
 
@@ -49,9 +49,10 @@ def login_user(request: HttpRequest, data: LoginIn):
         user_authenticated = authenticate(username=user.username, password=data.password)
         if user_authenticated:
             refresh = RefreshToken.for_user(user_authenticated)
+            access = AccessToken.for_user(user_authenticated)
             return {
                 'refresh': str(refresh),
-                'access': str(refresh.access_token),
+                'access': str(access),
             }
     
     return 401, {"message": "بيانات الدخول غير صحيحة. يرجى التأكد من البريد الإلكتروني وكلمة المرور."}

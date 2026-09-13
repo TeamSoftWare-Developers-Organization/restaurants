@@ -7,9 +7,8 @@ class Order(models.Model):
     # order_id (مفتاح أساسي) يتم إنشاؤه تلقائياً بواسطة Django كـ 'id'
     # مفتاح خارجي يربط الطلب بالموظف الذي قام بإنشائه/أخذه
     employee = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, blank=True, related_name='orders_taken')
-    # رقم الطاولة (سنضيف موديل Tables لاحقاً، ولكن مؤقتاً يمكن أن يكون حقلاً نصياً أو رقمياً)
-    # ملاحظة: سنقوم بتعديل هذا لاحقاً لربطه بموديل Tables فعلي.
-    table_number = models.CharField(max_length=10, blank=True, null=True)
+    # رقم الطاولة أو نوع الطلب (سفري / محلي / طاولة ...)
+    table_number = models.CharField(max_length=50, blank=True, null=True)
 
     order_date_time = models.DateTimeField(auto_now_add=True) # تاريخ ووقت إنشاء الطلب
     

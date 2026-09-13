@@ -520,9 +520,10 @@ export default function POSPage() {
             setTimeout(() => {
                 window.print();
             }, 500);
-        } catch (err) {
+        } catch (err: any) {
             console.error('Failed to issue invoice', err);
-            alert('حدث خطأ أثناء إصدار الفاتورة');
+            const msg = err?.response?.data?.message || err?.message || 'حدث خطأ أثناء إصدار الفاتورة';
+            alert(`حدث خطأ أثناء إصدار الفاتورة: ${msg}`);
         }
     }
 }

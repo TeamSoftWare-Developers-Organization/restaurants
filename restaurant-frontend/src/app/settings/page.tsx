@@ -225,15 +225,18 @@ export default function SettingsPage() {
                                     <input
                                         type="number"
                                         step="0.01"
-                                        value={localSettings?.tax_rate || 0}
-                                        onChange={(e) => handleChange('tax_rate', parseFloat(e.target.value))}
+                                        value={localSettings?.tax_rate !== undefined && !isNaN(localSettings.tax_rate) ? localSettings.tax_rate : ''}
+                                        onChange={(e) => {
+                                            const val = parseFloat(e.target.value);
+                                            handleChange('tax_rate', isNaN(val) ? 0 : val);
+                                        }}
                                         className="w-full px-5 py-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all font-semibold"
                                         required
                                     />
                                 </div>
                                 <div className="md:col-span-2 p-4 bg-indigo-50 dark:bg-indigo-900/10 rounded-2xl border border-indigo-100 dark:border-indigo-900/20">
                                     <p className="text-xs text-indigo-600 dark:text-indigo-400 font-bold leading-relaxed">
-                                        💡 ملاحظة: سيتم تطبيق نسبة الضريبة هذه تلقائياً على جميع الطلبات الجديدة في صفحة نقطة البيع (POS). يرجى التأكد من صحتها حسب الأنظمة المحلية.
+                                         💡 ملاحظة: سيتم تطبيق نسبة الضريبة هذه تلقائياً على جميع الطلبات الجديدة في صفحة نقطة البيع (POS). يرجى التأكد من صحتها حسب الأنظمة المحلية.
                                     </p>
                                 </div>
                             </div>
@@ -273,8 +276,11 @@ export default function SettingsPage() {
                                                 <input
                                                     type="number"
                                                     step="0.01"
-                                                    value={localSettings?.default_delivery_fee || 0}
-                                                    onChange={(e) => handleChange('default_delivery_fee', parseFloat(e.target.value))}
+                                                    value={localSettings?.default_delivery_fee !== undefined && !isNaN(localSettings.default_delivery_fee) ? localSettings.default_delivery_fee : ''}
+                                                    onChange={(e) => {
+                                                        const val = parseFloat(e.target.value);
+                                                        handleChange('default_delivery_fee', isNaN(val) ? 0 : val);
+                                                    }}
                                                     className="w-24 h-9 px-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all font-bold text-sm text-left"
                                                 />
                                             </div>

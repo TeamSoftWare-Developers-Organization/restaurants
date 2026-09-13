@@ -73,9 +73,6 @@ def create_order(request, order_data: OrderIn):
     إنشاء طلب جديد وإضافة أصناف إليه.
     """
     try:
-        # Debugging: Log the incoming data
-        print(f"DEBUG: Incoming Order Data: {order_data.dict()}")
-        
         # التحقق من وجود وردية مفتوحة للكاشير/الموظف
         from payments.models import Shift
         current_shift = Shift.objects.filter(cashier=request.auth, status='open').first()
@@ -96,23 +93,29 @@ def create_order(request, order_data: OrderIn):
             discount_amount=order_data.discount_amount
         )
 
-        # إضافة أصناف الطلب
+        # إضافة أصناف الطلب وخصم المكونات من المخزون
+        from inventory.models import RecipeIngredient
         for item_data in order_data.items:
             menu_item = get_object_or_404(MenuItem, id=item_data.menu_item_id)
             OrderItem.objects.create(
                 order=order,
                 menu_item=menu_item,
                 quantity=item_data.quantity,
+                unit_price=menu_item.price,
                 notes=item_data.notes
             )
+            
+            # خصم المكونات من المخزون تلقائياً إذا وُجدت وصفة للصنف
+            recipes = RecipeIngredient.objects.filter(menu_item=menu_item)
+            for r in recipes:
+                deduct_amount = float(r.quantity_needed) * item_data.quantity
+                r.ingredient.current_stock = max(0.0, float(r.ingredient.current_stock) - deduct_amount)
+                r.ingredient.save()
         
         order.calculate_total() # تحديث الإجمالي بعد إضافة الأصناف
         return 200, order
     except Exception as e:
-        import traceback
-        error_detail = traceback.format_exc()
-        print("Backend Error:", error_detail)
-        return 500, {"message": str(e), "detail": error_detail}
+        return 500, {"message": str(e)}
 
 @order_router.get("/{order_id}", response=OrderOut, auth=JWTAuth())
 def get_order(request, order_id: int):

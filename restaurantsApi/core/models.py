@@ -1,3 +1,4 @@
+from decimal import Decimal
 from django.db import models
 from django.core.exceptions import ValidationError
 
@@ -9,12 +10,12 @@ class RestaurantSettings(models.Model):
     
     # Financials
     currency = models.CharField(max_length=10, default="SAR")
-    tax_rate = models.DecimalField(max_digits=5, decimal_places=2, default=15.0) # e.g., 15%
+    tax_rate = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('15.00')) # e.g., 15%
     
     # Operational
     invoice_footer_message = models.TextField(null=True, blank=True, default="شكراً لزيارتكم!")
     is_delivery_enabled = models.BooleanField(default=True)
-    default_delivery_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    default_delivery_fee = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
 
     def save(self, *args, **kwargs):
         if not self.pk and RestaurantSettings.objects.exists():

@@ -25,7 +25,8 @@ import {
     Banknote,
     Settings,
     Menu as MenuIcon,
-    ArrowRightLeft
+    ArrowRightLeft,
+    CookingPot
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { useUIStore } from '@/store/uiStore';
@@ -36,6 +37,7 @@ const links = [
     { label: 'الموظفون', icon: User, href: '/employees', color: 'blue' },
     { label: 'المخزون', icon: Snowflake, href: '/inventory', color: 'amber' },
     { label: 'قائمة الطعام', icon: ChefHat, href: '/menu', color: 'violet' },
+    { label: 'وصفات الطعام', icon: CookingPot, href: '/recipes', color: 'amber' },
     { label: 'الطلبات', icon: Truck, href: '/orders', color: 'rose' },
     { label: 'الطاولات', icon: TableIcon, href: '/tables', color: 'cyan' },
     { label: 'الحجوزات', icon: BadgeCheck, href: '/reservations', color: 'sky' },

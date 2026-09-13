@@ -1,3 +1,4 @@
+from decimal import Decimal
 from django.db import models
 from menu.models import MenuItem # استيراد موديل صنف القائمة
 
@@ -14,7 +15,7 @@ class Ingredient(models.Model):
     ]
     unit = models.CharField(max_length=10, choices=UNIT_CHOICES, default='Piece')
     
-    cost_per_unit = models.DecimalField(max_digits=10, decimal_places=2, default=0.00) # تكلفة الوحدة الواحدة
+    cost_per_unit = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00')) # تكلفة الوحدة الواحدة
     reorder_level = models.FloatField(default=0.0) # الحد الأدنى الذي يطلق التنبيه
     image = models.ImageField(upload_to='inventory_images/', null=True, blank=True) # حقل الصورة
     last_updated = models.DateTimeField(auto_now=True) # متى تم آخر تحديث
@@ -23,6 +24,9 @@ class Ingredient(models.Model):
         verbose_name = "مكون"
         verbose_name_plural = "المخزون (المكونات)"
         ordering = ['name']
+
+    def get_unit_display(self) -> str:
+        return dict(self.UNIT_CHOICES).get(self.unit, self.unit)
 
     def __str__(self):
         return f"{self.name} ({self.current_stock} {self.get_unit_display()})"

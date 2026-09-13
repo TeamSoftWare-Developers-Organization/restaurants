@@ -283,8 +283,11 @@ export default function InventoryPage() {
                             <input
                                 type="number"
                                 step="0.1"
-                                value={formData.current_stock}
-                                onChange={(e) => setFormData({ ...formData, current_stock: parseFloat(e.target.value) })}
+                                value={formData.current_stock !== undefined && !isNaN(formData.current_stock) ? formData.current_stock : ''}
+                                onChange={(e) => {
+                                    const val = parseFloat(e.target.value);
+                                    setFormData({ ...formData, current_stock: isNaN(val) ? 0 : val });
+                                }}
                                 className="w-full h-10 bg-gray-50 dark:bg-gray-950/40 border border-gray-100 dark:border-gray-800 rounded-xl px-4 text-sm font-bold outline-none focus:ring-2 focus:ring-amber-600/10"
                                 required
                             />
@@ -309,8 +312,11 @@ export default function InventoryPage() {
                             <input
                                 type="number"
                                 step="0.01"
-                                value={formData.cost_per_unit}
-                                onChange={(e) => setFormData({ ...formData, cost_per_unit: parseFloat(e.target.value) })}
+                                value={formData.cost_per_unit !== undefined && !isNaN(formData.cost_per_unit) ? formData.cost_per_unit : ''}
+                                onChange={(e) => {
+                                    const val = parseFloat(e.target.value);
+                                    setFormData({ ...formData, cost_per_unit: isNaN(val) ? 0 : val });
+                                }}
                                 className="w-full h-10 bg-gray-50 dark:bg-gray-950/40 border border-gray-100 dark:border-gray-800 rounded-xl px-4 text-sm font-bold outline-none focus:ring-2 focus:ring-amber-600/10"
                                 required
                             />
@@ -320,8 +326,11 @@ export default function InventoryPage() {
                             <input
                                 type="number"
                                 step="0.1"
-                                value={formData.reorder_level}
-                                onChange={(e) => setFormData({ ...formData, reorder_level: parseFloat(e.target.value) })}
+                                value={formData.reorder_level !== undefined && !isNaN(formData.reorder_level) ? formData.reorder_level : ''}
+                                onChange={(e) => {
+                                    const val = parseFloat(e.target.value);
+                                    setFormData({ ...formData, reorder_level: isNaN(val) ? 0 : val });
+                                }}
                                 className="w-full h-10 bg-gray-50 dark:bg-gray-950/40 border border-gray-100 dark:border-gray-800 rounded-xl px-4 text-sm font-bold outline-none focus:ring-2 focus:ring-amber-600/10"
                                 required
                             />

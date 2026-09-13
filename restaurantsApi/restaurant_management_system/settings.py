@@ -93,7 +93,7 @@ DATABASES = {
         'USER': 'postgres',    # اسم المستخدم الذي أنشأته
         'PASSWORD': 'zafer4519932093',  # كلمة مرور المستخدم (إذا قمت بتعيين واحدة)
         'HOST': 'localhost',          # أو عنوان IP لخادم PostgreSQL
-        'PORT': '5432',               # المنفذ الافتراضي لـ PostgreSQL
+        'PORT': '5433',               # المنفذ لـ PostgreSQL
     }
 }
 

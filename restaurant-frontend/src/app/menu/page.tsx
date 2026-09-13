@@ -105,6 +105,9 @@ export default function MenuPage() {
         }
         setImageFile(null);
         setImagePreview('');
+        if (categories.length === 0) {
+            setIsAddingCategory(true);
+        }
         setIsModalOpen(true);
     };
 
@@ -445,18 +448,20 @@ export default function MenuPage() {
                         />
                         <label htmlFor="is_available" className="text-sm font-bold text-gray-600 dark:text-gray-400 underline decoration-dotted">متاح للطلب الآن</label>
                     </div>
-                    <button
-                        type="submit"
-                        disabled={isUploading}
-                        className={`w-full h-11 bg-violet-600 hover:bg-violet-700 text-white rounded-xl font-black shadow-lg shadow-violet-600/20 flex items-center justify-center gap-2 transition-all active:scale-95 ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    >
-                        {isUploading ? (
-                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        ) : (
-                            <Save className="w-4 h-4" />
-                        )}
-                        {isUploading ? 'جاري الرفع...' : (editingItem ? 'حفظ التعديلات' : 'إضافة إلى القائمة')}
-                    </button>
+                    <div className="sticky bottom-0 pt-3 pb-1 bg-card dark:bg-card border-t border-gray-100 dark:border-gray-800/60 mt-4">
+                        <button
+                            type="submit"
+                            disabled={isUploading}
+                            className={`w-full h-11 bg-violet-600 hover:bg-violet-700 text-white rounded-xl font-black shadow-lg shadow-violet-600/20 flex items-center justify-center gap-2 transition-all active:scale-95 ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        >
+                            {isUploading ? (
+                                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            ) : (
+                                <Save className="w-4 h-4" />
+                            )}
+                            {isUploading ? 'جاري الرفع...' : (editingItem ? 'حفظ التعديلات' : 'إضافة إلى القائمة')}
+                        </button>
+                    </div>
                 </form>
             </Modal>
 
@@ -488,7 +493,10 @@ export default function MenuPage() {
                                     step="0.01"
                                     placeholder="الكمية المطلوبة"
                                     value={newRecipeData.quantity_needed || ''}
-                                    onChange={(e) => setNewRecipeData({ ...newRecipeData, quantity_needed: parseFloat(e.target.value) })}
+                                    onChange={(e) => {
+                                        const val = parseFloat(e.target.value);
+                                        setNewRecipeData({ ...newRecipeData, quantity_needed: isNaN(val) ? 0 : val });
+                                    }}
                                     className="w-full h-10 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl px-3 text-xs font-bold outline-none"
                                 />
                             </div>

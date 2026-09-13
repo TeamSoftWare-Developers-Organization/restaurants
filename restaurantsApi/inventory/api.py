@@ -2,7 +2,8 @@
 
 from ninja import Router, Schema, Form, File
 from ninja.files import UploadedFile
-from typing import List, Optional
+from decimal import Decimal
+from typing import List, Optional, Any
 from datetime import datetime
 from django.shortcuts import get_object_or_404
 from django.db import IntegrityError
@@ -33,6 +34,7 @@ class IngredientOut(Schema):
     image: Optional[str] = None
     last_updated: datetime
 
+
 # نقاط نهاية CRUD لـ Ingredient (المكونات)
 
 @inventory_router.get("/ingredients/", response=List[IngredientOut])
@@ -43,7 +45,11 @@ def list_ingredients(request):
     return Ingredient.objects.all()
 
 @inventory_router.post("/ingredients/", response=IngredientOut)
-def create_ingredient(request, ingredient_data: IngredientIn = Form(...), image: UploadedFile = File(None)):
+def create_ingredient(
+    request,
+    ingredient_data: IngredientIn = Form(...),  # type: ignore
+    image: Optional[UploadedFile] = File(None),  # type: ignore
+):
     """
     إنشاء مكون جديد في المخزون.
     """
@@ -57,7 +63,12 @@ def create_ingredient(request, ingredient_data: IngredientIn = Form(...), image:
         return 400, {"message": "المكون موجود بالفعل."}
 
 @inventory_router.put("/ingredients/{ingredient_id}/", response=IngredientOut)
-def update_ingredient(request, ingredient_id: int, ingredient_data: IngredientIn = Form(...), image: UploadedFile = File(None)):
+def update_ingredient(
+    request,
+    ingredient_id: int,
+    ingredient_data: IngredientIn = Form(...),  # type: ignore
+    image: Optional[UploadedFile] = File(None),  # type: ignore
+):
     """
     تحديث بيانات مكون في المخزون.
     """
@@ -65,7 +76,7 @@ def update_ingredient(request, ingredient_id: int, ingredient_data: IngredientIn
     for attr, value in ingredient_data.dict().items():
         setattr(ingredient, attr, value)
     if image:
-        ingredient.image = image
+        ingredient.image = image  # type: ignore
     ingredient.save()
     return ingredient
 
@@ -92,6 +103,13 @@ class RecipeIngredientOut(Schema):
 
 # نقاط نهاية للتعامل مع RecipeIngredient (إدارة الوصفات)
 
+@inventory_router.get("/recipes/", response=List[RecipeIngredientOut])
+def list_all_recipes(request):
+    """
+    جلب جميع المكونات المرتبطة بوصفات الأصناف.
+    """
+    return RecipeIngredient.objects.select_related('menu_item', 'ingredient').all()
+
 @inventory_router.get("/recipes/{menu_item_id}/", response=List[RecipeIngredientOut])
 def get_recipe_for_item(request, menu_item_id: int):
     """
@@ -113,7 +131,7 @@ def add_ingredient_to_recipe(request, menu_item_id: int, recipe_data: RecipeIngr
         recipe_item = RecipeIngredient.objects.create(
             menu_item=menu_item,
             ingredient=ingredient,
-            quantity_needed=recipe_data.quantity_needed
+            quantity_needed=Decimal(str(recipe_data.quantity_needed))
         )
         return recipe_item
     except IntegrityError:
@@ -127,7 +145,7 @@ def update_recipe_ingredient(request, recipe_ingredient_id: int, recipe_data: Re
     recipe_item = get_object_or_404(RecipeIngredient, id=recipe_ingredient_id)
     
     # يمكن السماح بتغيير المكون نفسه أو الكمية فقط
-    recipe_item.quantity_needed = recipe_data.quantity_needed
+    recipe_item.quantity_needed = Decimal(str(recipe_data.quantity_needed))
     
     # إذا تم تمرير ingredient_id، نقوم بتحديث المكون المرتبط
     if recipe_data.ingredient_id is not None:

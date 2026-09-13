@@ -1,3 +1,4 @@
+from decimal import Decimal
 from django.db import models
 from employees.models import Employee # استيراد موديل الموظف
 from menu.models import MenuItem     # استيراد موديل صنف القائمة
@@ -22,8 +23,8 @@ class Order(models.Model):
     ]
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     
-    total_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00) # إجمالي قيمة الطلب
-    discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00) # قيمة الخصم المطبق
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00')) # إجمالي قيمة الطلب
+    discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00')) # قيمة الخصم المطبق
 
     class Meta:
         verbose_name = "طلب"
@@ -58,18 +59,8 @@ class OrderItem(models.Model):
     def __str__(self):
         return f"{self.quantity} x {self.menu_item.name if self.menu_item else 'صنف محذوف'} (طلب {self.order.id})"
 
-    # دالة لحفظ السعر الحالي للصنف عند إضافة OrderItem وخصم المخزون
+    # دالة لحفظ السعر الحالي للصنف عند إضافة OrderItem
     def save(self, *args, **kwargs):
-        is_new = self.pk is None
         if not self.unit_price and self.menu_item:
             self.unit_price = self.menu_item.price
-        
         super().save(*args, **kwargs)
-        
-        # خصم المخزون إذا كان الصنف جديداً وله وصفة
-        if is_new and self.menu_item:
-            try:
-                from inventory.models import RecipeIngredient
-                RecipeIngredient.deduct_stock_for_item(self.menu_item, self.quantity)
-            except ImportError:
-                pass # في حال وجود مشاكل في الاستيراد الدائري أو غيره

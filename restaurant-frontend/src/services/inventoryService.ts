@@ -40,12 +40,20 @@ export const inventoryService = {
     },
 
     // Recipe Management
+    getAllRecipes: async (): Promise<RecipeIngredient[]> => {
+        const response = await api.get('/inventory/recipes/');
+        return response.data;
+    },
     getRecipeForItem: async (menuItemId: number): Promise<RecipeIngredient[]> => {
         const response = await api.get(`/inventory/recipes/${menuItemId}/`);
         return response.data;
     },
     addIngredientToRecipe: async (menuItemId: number, data: { ingredient_id: number, quantity_needed: number }): Promise<RecipeIngredient> => {
         const response = await api.post(`/inventory/recipes/${menuItemId}/`, data);
+        return response.data;
+    },
+    updateRecipeIngredient: async (recipeIngredientId: number, data: { ingredient_id?: number, quantity_needed: number }): Promise<RecipeIngredient> => {
+        const response = await api.put(`/inventory/recipe_items/${recipeIngredientId}/`, data);
         return response.data;
     },
     removeIngredientFromRecipe: async (recipeIngredientId: number): Promise<void> => {

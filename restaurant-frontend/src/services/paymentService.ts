@@ -6,6 +6,7 @@ export interface Payment {
     payment_date_time: string;
     amount: number;
     payment_method: string;
+    card_provider?: string;
     transaction_id?: string;
 }
 

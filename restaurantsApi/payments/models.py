@@ -67,14 +67,16 @@ class Payment(models.Model):
     payment_date_time = models.DateTimeField(auto_now_add=True) # تاريخ ووقت الدفع
     amount = models.DecimalField(max_digits=10, decimal_places=2) # المبلغ المدفوع
     
-    # طريقة الدفع: نقدي، بطاقة ائتمان، محفظة إلكترونية
+    # طريقة الدفع: نقدي، بطاقة، آجل، محفظة إلكترونية
     METHOD_CHOICES = [
         ('cash', 'نقدي'),
-        ('credit_card', 'بطاقة ائتمان'),
+        ('credit_card', 'بطاقة مصرفية'),
+        ('debt', 'آجل'),
         ('online_wallet', 'محفظة إلكترونية'),
         ('other', 'أخرى'),
     ]
     payment_method = models.CharField(max_length=20, choices=METHOD_CHOICES, default='cash')
+    card_provider = models.CharField(max_length=50, blank=True, null=True) # خدمة البطاقة مثل: تداول، إدفع لي، سداد، إلخ
     
     transaction_id = models.CharField(max_length=100, blank=True, null=True, unique=True) # رقم المعاملة (إذا كان موجوداً)
 

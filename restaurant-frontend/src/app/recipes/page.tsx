@@ -18,7 +18,7 @@ import {
 import { useAuthStore } from '@/store/authStore';
 import { useUIStore } from '@/store/uiStore';
 import { useRouter } from 'next/navigation';
-import { menuService, MenuItem } from '@/services/menuService';
+import { menuService, MenuItem, isLiquidOrDrink } from '@/services/menuService';
 import { inventoryService, Ingredient, RecipeIngredient } from '@/services/inventoryService';
 import { getFullUrl } from '@/lib/api';
 
@@ -73,9 +73,10 @@ export default function RecipesPage() {
                 setNewIngredientId(ings[0].id);
             }
 
-            // Auto-select first item if available
-            if (items.length > 0) {
-                selectMenuItem(items[0]);
+            // Auto-select first food item if available (excluding drinks/liquids)
+            const foodOnly = items.filter(item => !isLiquidOrDrink(item));
+            if (foodOnly.length > 0) {
+                selectMenuItem(foodOnly[0]);
             }
         } catch (err) {
             console.error('Failed to load recipes data', err);
@@ -153,8 +154,10 @@ export default function RecipesPage() {
     const profitMargin = sellingPrice > 0 ? sellingPrice - totalCost : 0;
     const profitPercentage = sellingPrice > 0 ? ((profitMargin / sellingPrice) * 100).toFixed(1) : '0';
 
-    // Filtered menu items
-    const filteredMenuItems = menuItems.filter(item =>
+    // Filtered menu items - strictly exclude any liquids/drinks (water, cold/hot drinks)
+    const foodMenuItems = menuItems.filter(item => !isLiquidOrDrink(item));
+
+    const filteredMenuItems = foodMenuItems.filter(item =>
         item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.category?.name?.toLowerCase().includes(searchQuery.toLowerCase())
     );
@@ -207,15 +210,19 @@ export default function RecipesPage() {
                                     <Layers className="w-4 h-4 text-amber-500" />
                                     اختر وجبة للتحضير
                                 </span>
-                                <span className="text-[11px] font-bold text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-md">
-                                    {menuItems.length} وجبة
+                                <span className="text-[11px] font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 border border-amber-200/50 dark:border-amber-800/30 px-2 py-0.5 rounded-md">
+                                    {foodMenuItems.length} وجبة طعام
                                 </span>
+                            </div>
+                            <div className="mb-2 p-2 bg-amber-50/60 dark:bg-amber-950/30 border border-amber-200/40 dark:border-amber-800/20 rounded-xl text-[10px] text-amber-800 dark:text-amber-300 font-bold flex items-center gap-1.5">
+                                <span>🍽️</span>
+                                <span>أطباق الطعام فقط (المياه والمشروبات الجاهزة مستبعدة تلقائياً).</span>
                             </div>
                             <div className="relative">
                                 <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                                 <input
                                     type="text"
-                                    placeholder="بحث عن صنف أو فئة..."
+                                    placeholder="بحث في وجبات الطعام..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     className="w-full h-9 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl pr-9 pl-3 text-xs font-bold outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"

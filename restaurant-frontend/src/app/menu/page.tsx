@@ -16,7 +16,7 @@ import {
 import { useAuthStore } from '@/store/authStore';
 import { useUIStore } from '@/store/uiStore';
 import { useRouter } from 'next/navigation';
-import { menuService, MenuItem, Category } from '@/services/menuService';
+import { menuService, MenuItem, Category, isLiquidOrDrink } from '@/services/menuService';
 import { inventoryService, Ingredient, RecipeIngredient } from '@/services/inventoryService';
 import { ChefHat } from 'lucide-react';
 import { getFullUrl } from '@/lib/api';
@@ -29,6 +29,11 @@ export default function MenuPage() {
     const [menuData, setMenuData] = useState<MenuItem[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+
+    // Filter states
+    const [searchQuery, setSearchQuery] = useState('');
+    const [menuTypeFilter, setMenuTypeFilter] = useState<'all' | 'food' | 'drinks'>('all');
+    const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
     // Modal & Form State
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -207,6 +212,18 @@ export default function MenuPage() {
         }
     };
 
+    const foodCount = menuData.filter(item => !isLiquidOrDrink(item)).length;
+    const drinksCount = menuData.filter(item => isLiquidOrDrink(item)).length;
+
+    const filteredMenu = menuData.filter(item => {
+        const isDrink = isLiquidOrDrink(item);
+        if (menuTypeFilter === 'food' && isDrink) return false;
+        if (menuTypeFilter === 'drinks' && !isDrink) return false;
+        if (selectedCategory !== 'all' && item.category?.name !== selectedCategory) return false;
+        if (searchQuery.trim() && !item.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+        return true;
+    });
+
     if (!isClient || !isLoggedIn) return null;
 
     return (
@@ -235,12 +252,52 @@ export default function MenuPage() {
                 </header>
 
                 <section className="bg-card dark:bg-card rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800/40 overflow-hidden">
+                    {/* Filter and Search Bar */}
                     <div className="p-6 border-b border-gray-50 dark:border-gray-800/30 flex flex-col md:flex-row items-center justify-between gap-4">
+                        {/* Type Tabs: All / Food / Drinks */}
+                        <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
+                            <button
+                                onClick={() => setMenuTypeFilter('all')}
+                                className={`px-4 py-2 rounded-xl text-xs font-black transition-all ${
+                                    menuTypeFilter === 'all'
+                                        ? 'bg-violet-600 text-white shadow-md shadow-violet-600/20'
+                                        : 'bg-gray-100 dark:bg-gray-800/60 text-gray-600 dark:text-gray-400 hover:bg-gray-200'
+                                }`}
+                            >
+                                الكل ({menuData.length})
+                            </button>
+                            <button
+                                onClick={() => setMenuTypeFilter('food')}
+                                className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 ${
+                                    menuTypeFilter === 'food'
+                                        ? 'bg-violet-600 text-white shadow-md shadow-violet-600/20'
+                                        : 'bg-gray-100 dark:bg-gray-800/60 text-gray-600 dark:text-gray-400 hover:bg-gray-200'
+                                }`}
+                            >
+                                <span>🍽️</span>
+                                <span>أطباق الطعام ({foodCount})</span>
+                            </button>
+                            <button
+                                onClick={() => setMenuTypeFilter('drinks')}
+                                className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 ${
+                                    menuTypeFilter === 'drinks'
+                                        ? 'bg-sky-600 text-white shadow-md shadow-sky-600/20'
+                                        : 'bg-gray-100 dark:bg-gray-800/60 text-gray-600 dark:text-gray-400 hover:bg-gray-200'
+                                }`}
+                            >
+                                <span>🥤</span>
+                                <span>المشروبات والسوائل ({drinksCount})</span>
+                            </button>
+                        </div>
+
+                        {/* Search Input */}
                         <div className="relative w-full md:w-80 group">
                             <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-violet-600 transition-colors" />
                             <input
                                 type="text"
                                 placeholder="بحث في المنيو..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
                                 className="w-full h-10 bg-gray-50/50 dark:bg-gray-900/40 border border-gray-100/50 dark:border-gray-800 focus:bg-white dark:focus:bg-gray-900 focus:ring-2 focus:ring-violet-600/10 rounded-xl pr-10 pl-4 text-sm font-bold transition-all outline-none"
                             />
                         </div>
@@ -250,7 +307,7 @@ export default function MenuPage() {
                         <table className="w-full text-right" dir="rtl">
                             <thead>
                                 <tr className="bg-gray-50/30 dark:bg-gray-900/20 border-b border-gray-50 dark:border-gray-800/40">
-                                    <th className="px-6 py-4 text-gray-400 font-bold text-[11px] uppercase tracking-widest leading-none">الصنف</th>
+                                    <th className="px-6 py-4 text-gray-400 font-bold text-[11px] uppercase tracking-widest leading-none">الصنف والنوع</th>
                                     <th className="px-6 py-4 text-gray-400 font-bold text-[11px] uppercase tracking-widest leading-none">الفئة</th>
                                     <th className="px-6 py-4 text-gray-400 font-bold text-[11px] uppercase tracking-widest leading-none">السعر</th>
                                     <th className="px-6 py-4 text-gray-400 font-bold text-[11px] uppercase tracking-widest leading-none">الحالة</th>
@@ -260,58 +317,87 @@ export default function MenuPage() {
                             <tbody className="divide-y divide-gray-50 dark:divide-gray-800/30">
                                 {isLoading ? (
                                     <tr><td colSpan={5} className="p-8 text-center text-gray-400 font-bold italic">جاري التحميل...</td></tr>
-                                ) : menuData.map((item) => (
-                                    <tr key={item.id} className="hover:bg-gray-50/30 dark:hover:bg-gray-900/20 transition-colors group">
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-xl overflow-hidden flex items-center justify-center border border-gray-100 dark:border-gray-800">
-                                                    {item.image_url ? (
-                                                        <img src={getFullUrl(item.image_url)} alt={item.name} className="w-full h-full object-cover" />
-                                                    ) : (
-                                                        <Utensils className="w-5 h-5 text-gray-300" />
-                                                    )}
+                                ) : filteredMenu.length === 0 ? (
+                                    <tr><td colSpan={5} className="p-8 text-center text-gray-400 font-bold italic">لا توجد أصناف مطابقة للبحث أو الفلتر</td></tr>
+                                ) : filteredMenu.map((item) => {
+                                    const isDrink = isLiquidOrDrink(item);
+                                    return (
+                                        <tr key={item.id} className="hover:bg-gray-50/30 dark:hover:bg-gray-900/20 transition-colors group">
+                                            <td className="px-6 py-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-xl overflow-hidden flex items-center justify-center border border-gray-100 dark:border-gray-800">
+                                                        {item.image_url ? (
+                                                            <img src={getFullUrl(item.image_url)} alt={item.name} className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            <Utensils className="w-5 h-5 text-gray-300" />
+                                                        )}
+                                                    </div>
+                                                    <div>
+                                                        <div className="font-black text-gray-900 dark:text-gray-200">{item.name}</div>
+                                                        <div className="mt-1">
+                                                            {isDrink ? (
+                                                                <span className="inline-flex items-center gap-1 bg-sky-50 dark:bg-sky-950/30 text-sky-600 dark:text-sky-400 border border-sky-200/40 dark:border-sky-800/30 px-2 py-0.5 rounded text-[10px] font-bold">
+                                                                    <span>🥤</span> مشروبات وسوائل
+                                                                </span>
+                                                            ) : (
+                                                                <span className="inline-flex items-center gap-1 bg-violet-50 dark:bg-violet-950/30 text-violet-600 dark:text-violet-400 border border-violet-200/40 dark:border-violet-800/30 px-2 py-0.5 rounded text-[10px] font-bold">
+                                                                    <span>🍽️</span> طبق طعام
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                                <span className="font-black text-gray-900 dark:text-gray-200">{item.name}</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <span className="bg-violet-50 dark:bg-violet-900/10 text-violet-600 px-2.5 py-1 rounded-lg text-[11px] font-bold">
-                                                {item.category?.name || 'عام'}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 font-black text-violet-600 tabular-nums">
-                                            {item.price} <span className="text-[10px] opacity-70">د.ل</span>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <span className={`inline-flex px-2 py-1 rounded-lg text-[10px] font-black ${item.is_available ? 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600' : 'bg-rose-50 dark:bg-rose-950/20 text-rose-600'}`}>
-                                                {item.is_available ? 'متاح' : 'غير متاح'}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex justify-center gap-3">
-                                                <button
-                                                    onClick={() => handleOpenRecipeModal(item)}
-                                                    className="p-2 bg-amber-50/50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-400 rounded-xl hover:scale-110 transition-all border border-amber-100 dark:border-amber-900/30"
-                                                    title="إدارة المكونات"
-                                                >
-                                                    <ChefHat className="w-4 h-4" />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleOpenModal(item)}
-                                                    className="p-2 bg-violet-50/50 dark:bg-violet-950/20 text-violet-600 dark:text-violet-400 rounded-xl hover:scale-110 transition-all border border-violet-100 dark:border-violet-900/30"
-                                                >
-                                                    <Pencil className="w-4 h-4" />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDelete(item.id)}
-                                                    className="p-2 bg-rose-50/50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 rounded-xl hover:scale-110 transition-all border border-rose-100 dark:border-rose-900/30"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <span className="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-2.5 py-1 rounded-lg text-[11px] font-bold">
+                                                    {item.category?.name || 'عام'}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 font-black text-violet-600 tabular-nums">
+                                                {item.price} <span className="text-[10px] opacity-70">د.ل</span>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <span className={`inline-flex px-2 py-1 rounded-lg text-[10px] font-black ${item.is_available ? 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600' : 'bg-rose-50 dark:bg-rose-950/20 text-rose-600'}`}>
+                                                    {item.is_available ? 'متاح' : 'غير متاح'}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="flex justify-center items-center gap-2">
+                                                    {!isDrink ? (
+                                                        <button
+                                                            onClick={() => handleOpenRecipeModal(item)}
+                                                            className="p-2 bg-amber-50/50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-400 rounded-xl hover:scale-110 transition-all border border-amber-100 dark:border-amber-900/30"
+                                                            title="إدارة وصفة ومكونات الوجبة"
+                                                        >
+                                                            <ChefHat className="w-4 h-4" />
+                                                        </button>
+                                                    ) : (
+                                                        <span
+                                                            className="p-2 bg-gray-50 dark:bg-gray-900/40 text-gray-300 dark:text-gray-600 rounded-xl cursor-not-allowed text-[10px] font-bold border border-gray-100 dark:border-gray-800"
+                                                            title="المشروبات والسوائل منتجات جاهزة لا تتطلب وصفات طهي"
+                                                        >
+                                                            منتج جاهز
+                                                        </span>
+                                                    )}
+                                                    <button
+                                                        onClick={() => handleOpenModal(item)}
+                                                        className="p-2 bg-violet-50/50 dark:bg-violet-950/20 text-violet-600 dark:text-violet-400 rounded-xl hover:scale-110 transition-all border border-violet-100 dark:border-violet-900/30"
+                                                        title="تعديل الصنف"
+                                                    >
+                                                        <Pencil className="w-4 h-4" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDelete(item.id)}
+                                                        className="p-2 bg-rose-50/50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 rounded-xl hover:scale-110 transition-all border border-rose-100 dark:border-rose-900/30"
+                                                        title="حذف الصنف"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
                             </tbody>
                         </table>
                     </div>

@@ -18,6 +18,7 @@ class Order(models.Model):
         ('ready', 'جاهز للتسليم'),
         ('delivered', 'تم التسليم'),
         ('paid', 'مدفوع'),
+        ('completed', 'مكتمل'),
         ('cancelled', 'ملغى'),
     ]
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')

@@ -24,6 +24,7 @@ class PaymentIn(Schema):
     order_id: int
     amount: float
     payment_method: str
+    card_provider: Optional[str] = None
     transaction_id: Optional[str] = None
 
 class PaymentOut(Schema):
@@ -32,6 +33,7 @@ class PaymentOut(Schema):
     payment_date_time: datetime
     amount: float
     payment_method: str
+    card_provider: Optional[str] = None
     transaction_id: Optional[str] = None
 
 # مخططات الوردية (Shift)
@@ -109,6 +111,7 @@ def record_payment(request, payment_data: PaymentIn):
         order=order,
         amount=payment_data.amount,
         payment_method=payment_data.payment_method,
+        card_provider=payment_data.card_provider,
         transaction_id=payment_data.transaction_id
     )
     

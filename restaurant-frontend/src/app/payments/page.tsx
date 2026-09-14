@@ -36,6 +36,11 @@ export default function PaymentsPage() {
     // Summary state
     const [dailyTotal, setDailyTotal] = useState(0);
 
+    // Active filter tab: 'all' | 'cash' | 'card' | 'debt'
+    const [activeMethodTab, setActiveMethodTab] = useState<'all' | 'cash' | 'card' | 'debt'>('all');
+    const [selectedCardProvider, setSelectedCardProvider] = useState<string>('all');
+    const [searchTerm, setSearchTerm] = useState('');
+
     useEffect(() => {
         setIsClient(true);
         if (!isLoggedIn) {
@@ -75,6 +80,50 @@ export default function PaymentsPage() {
         }
     };
 
+    // Calculate totals per payment method
+    const cashPayments = payments.filter(p => p.payment_method === 'cash');
+    const cardPayments = payments.filter(p => p.payment_method === 'credit_card' || p.payment_method === 'card');
+    const debtPayments = payments.filter(p => p.payment_method === 'debt');
+
+    const totalCash = cashPayments.reduce((acc, p) => acc + p.amount, 0);
+    const totalCard = cardPayments.reduce((acc, p) => acc + p.amount, 0);
+    const totalDebt = debtPayments.reduce((acc, p) => acc + p.amount, 0);
+
+    // Available card providers in payments
+    const availableCardProviders = Array.from(
+        new Set(
+            cardPayments
+                .map(p => p.card_provider || 'غير محدد')
+                .filter(Boolean)
+        )
+    );
+
+    // Filtered list
+    const filteredPayments = payments.filter(txn => {
+        // Method filter
+        if (activeMethodTab === 'cash' && txn.payment_method !== 'cash') return false;
+        if (activeMethodTab === 'debt' && txn.payment_method !== 'debt') return false;
+        if (activeMethodTab === 'card') {
+            const isCard = txn.payment_method === 'credit_card' || txn.payment_method === 'card';
+            if (!isCard) return false;
+            if (selectedCardProvider !== 'all') {
+                const provider = txn.card_provider || 'غير محدد';
+                if (provider !== selectedCardProvider) return false;
+            }
+        }
+
+        // Search filter
+        if (searchTerm.trim()) {
+            const term = searchTerm.trim().toLowerCase();
+            const txnIdMatch = (txn.transaction_id || `TXN-${txn.id}`).toLowerCase().includes(term);
+            const orderIdMatch = txn.order_id.toString().includes(term);
+            const providerMatch = (txn.card_provider || '').toLowerCase().includes(term);
+            return txnIdMatch || orderIdMatch || providerMatch;
+        }
+
+        return true;
+    });
+
     if (!isClient || !isLoggedIn) return null;
 
     return (
@@ -90,47 +139,155 @@ export default function PaymentsPage() {
                         </div>
                         <div>
                             <h1 className="text-2xl font-black text-gray-900 dark:text-white leading-none mb-1">المدفوعات</h1>
-                            <p className="text-gray-400 dark:text-gray-500 text-[13px] font-bold opacity-70">سجل المعاملات المالية</p>
+                            <p className="text-gray-400 dark:text-gray-500 text-[13px] font-bold opacity-70">سجل المعاملات وتفصيل طرق الدفع</p>
                         </div>
                     </div>
                 </header>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                    <div className="bg-card dark:bg-card p-6 rounded-2xl border border-gray-100 dark:border-gray-800/40 shadow-sm flex items-center gap-5 transition-all hover:scale-[1.02]">
-                        <div className="w-12 h-12 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 rounded-2xl flex items-center justify-center">
+                {/* Cards Summary by Method */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+                    {/* All / Total */}
+                    <div 
+                        onClick={() => { setActiveMethodTab('all'); setSelectedCardProvider('all'); }}
+                        className={`bg-card dark:bg-card p-5 rounded-2xl border shadow-sm flex items-center gap-4 transition-all cursor-pointer hover:scale-[1.02] ${activeMethodTab === 'all' ? 'border-orange-500 ring-2 ring-orange-500/20' : 'border-gray-100 dark:border-gray-800/40'}`}
+                    >
+                        <div className="w-12 h-12 bg-orange-50 dark:bg-orange-950/20 text-orange-600 rounded-2xl flex items-center justify-center shrink-0">
                             <DollarSign className="w-6 h-6" />
                         </div>
                         <div>
-                            <p className="text-[11px] text-gray-400 font-black uppercase tracking-widest mb-1">إجمالي اليوم</p>
-                            <h3 className="text-2xl font-black text-gray-900 dark:text-white tabular-nums">
+                            <p className="text-[11px] text-gray-400 font-black uppercase tracking-widest mb-1">إجمالي الكل</p>
+                            <h3 className="text-xl font-black text-gray-900 dark:text-white tabular-nums">
                                 {dailyTotal.toFixed(2)}
                                 <span className="text-xs font-bold text-gray-400 mr-1 italic">د.ل</span>
                             </h3>
+                            <span className="text-[10px] text-gray-400 font-bold">{payments.length} معاملة</span>
                         </div>
                     </div>
-                    <div className="bg-card dark:bg-card p-6 rounded-2xl border border-gray-100 dark:border-gray-800/40 shadow-sm flex items-center gap-5 transition-all hover:scale-[1.02]">
-                        <div className="w-12 h-12 bg-orange-50 dark:bg-orange-950/20 text-orange-600 rounded-2xl flex items-center justify-center">
+
+                    {/* Cash */}
+                    <div 
+                        onClick={() => { setActiveMethodTab('cash'); setSelectedCardProvider('all'); }}
+                        className={`bg-card dark:bg-card p-5 rounded-2xl border shadow-sm flex items-center gap-4 transition-all cursor-pointer hover:scale-[1.02] ${activeMethodTab === 'cash' ? 'border-emerald-500 ring-2 ring-emerald-500/20' : 'border-gray-100 dark:border-gray-800/40'}`}
+                    >
+                        <div className="w-12 h-12 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 rounded-2xl flex items-center justify-center shrink-0">
+                            <DollarSign className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-black uppercase tracking-widest mb-1">الدفع النقدي (كاش)</p>
+                            <h3 className="text-xl font-black text-emerald-600 tabular-nums">
+                                {totalCash.toFixed(2)}
+                                <span className="text-xs font-bold text-gray-400 mr-1 italic">د.ل</span>
+                            </h3>
+                            <span className="text-[10px] text-gray-400 font-bold">{cashPayments.length} معاملة</span>
+                        </div>
+                    </div>
+
+                    {/* Card */}
+                    <div 
+                        onClick={() => setActiveMethodTab('card')}
+                        className={`bg-card dark:bg-card p-5 rounded-2xl border shadow-sm flex items-center gap-4 transition-all cursor-pointer hover:scale-[1.02] ${activeMethodTab === 'card' ? 'border-blue-500 ring-2 ring-blue-500/20' : 'border-gray-100 dark:border-gray-800/40'}`}
+                    >
+                        <div className="w-12 h-12 bg-blue-50 dark:bg-blue-950/20 text-blue-600 rounded-2xl flex items-center justify-center shrink-0">
                             <CreditCard className="w-6 h-6" />
                         </div>
                         <div>
-                            <p className="text-[11px] text-gray-400 font-black uppercase tracking-widest mb-1">عدد المعاملات</p>
-                            <h3 className="text-2xl font-black text-gray-900 dark:text-white tabular-nums">
-                                {payments.length.toString().padStart(2, '0')}
+                            <p className="text-[11px] text-blue-600 dark:text-blue-400 font-black uppercase tracking-widest mb-1">دفع البطاقات</p>
+                            <h3 className="text-xl font-black text-blue-600 tabular-nums">
+                                {totalCard.toFixed(2)}
+                                <span className="text-xs font-bold text-gray-400 mr-1 italic">د.ل</span>
                             </h3>
+                            <span className="text-[10px] text-gray-400 font-bold">{cardPayments.length} معاملة</span>
+                        </div>
+                    </div>
+
+                    {/* Debt / آجل */}
+                    <div 
+                        onClick={() => { setActiveMethodTab('debt'); setSelectedCardProvider('all'); }}
+                        className={`bg-card dark:bg-card p-5 rounded-2xl border shadow-sm flex items-center gap-4 transition-all cursor-pointer hover:scale-[1.02] ${activeMethodTab === 'debt' ? 'border-amber-500 ring-2 ring-amber-500/20' : 'border-gray-100 dark:border-gray-800/40'}`}
+                    >
+                        <div className="w-12 h-12 bg-amber-50 dark:bg-amber-950/20 text-amber-600 rounded-2xl flex items-center justify-center shrink-0">
+                            <Clock className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <p className="text-[11px] text-amber-600 dark:text-amber-400 font-black uppercase tracking-widest mb-1">دفع آجل (ذمم)</p>
+                            <h3 className="text-xl font-black text-amber-600 tabular-nums">
+                                {totalDebt.toFixed(2)}
+                                <span className="text-xs font-bold text-gray-400 mr-1 italic">د.ل</span>
+                            </h3>
+                            <span className="text-[10px] text-gray-400 font-bold">{debtPayments.length} معاملة</span>
                         </div>
                     </div>
                 </div>
 
                 <section className="bg-card dark:bg-card rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800/40 overflow-hidden">
-                    <div className="p-6 border-b border-gray-50 dark:border-gray-800/30 flex flex-col md:flex-row items-center justify-between gap-4">
-                        <div className="relative w-full md:w-80 group">
-                            <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-orange-600 transition-colors" />
-                            <input
-                                type="text"
-                                placeholder="بحث برقم المعاملة..."
-                                className="w-full h-10 bg-gray-50/50 dark:bg-gray-900/40 border border-gray-100/50 dark:border-gray-800 focus:bg-white dark:focus:bg-gray-900 focus:ring-2 focus:ring-orange-600/10 rounded-xl pr-10 pl-4 text-sm font-bold transition-all outline-none"
-                            />
+                    {/* Filter Bar & Tabs */}
+                    <div className="p-6 border-b border-gray-50 dark:border-gray-800/30 flex flex-col gap-4">
+                        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                            {/* Method Tabs */}
+                            <div className="flex flex-wrap gap-2 w-full md:w-auto">
+                                <button
+                                    onClick={() => { setActiveMethodTab('all'); setSelectedCardProvider('all'); }}
+                                    className={`px-4 py-2 rounded-xl text-xs font-black transition-all ${activeMethodTab === 'all' ? 'bg-orange-600 text-white shadow-md shadow-orange-600/20' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 hover:text-orange-600'}`}
+                                >
+                                    جميع المعاملات ({payments.length})
+                                </button>
+                                <button
+                                    onClick={() => { setActiveMethodTab('cash'); setSelectedCardProvider('all'); }}
+                                    className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 ${activeMethodTab === 'cash' ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 hover:text-emerald-600'}`}
+                                >
+                                    <DollarSign className="w-3.5 h-3.5" />
+                                    نقدي ({cashPayments.length})
+                                </button>
+                                <button
+                                    onClick={() => setActiveMethodTab('card')}
+                                    className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 ${activeMethodTab === 'card' ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 hover:text-blue-600'}`}
+                                >
+                                    <CreditCard className="w-3.5 h-3.5" />
+                                    بطاقات ({cardPayments.length})
+                                </button>
+                                <button
+                                    onClick={() => { setActiveMethodTab('debt'); setSelectedCardProvider('all'); }}
+                                    className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 ${activeMethodTab === 'debt' ? 'bg-amber-600 text-white shadow-md shadow-amber-600/20' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 hover:text-amber-600'}`}
+                                >
+                                    <Clock className="w-3.5 h-3.5" />
+                                    آجل ({debtPayments.length})
+                                </button>
+                            </div>
+
+                            {/* Search */}
+                            <div className="relative w-full md:w-80 group">
+                                <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-orange-600 transition-colors" />
+                                <input
+                                    type="text"
+                                    placeholder="بحث برقم المعاملة أو الطلب أو الخدمة..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="w-full h-10 bg-gray-50/50 dark:bg-gray-900/40 border border-gray-100/50 dark:border-gray-800 focus:bg-white dark:focus:bg-gray-900 focus:ring-2 focus:ring-orange-600/10 rounded-xl pr-10 pl-4 text-sm font-bold transition-all outline-none"
+                                />
+                            </div>
                         </div>
+
+                        {/* Sub-tabs for Card Providers when 'card' tab is active */}
+                        {activeMethodTab === 'card' && availableCardProviders.length > 0 && (
+                            <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-gray-100 dark:border-gray-800/40">
+                                <span className="text-xs font-bold text-gray-400 ml-2">خدمة البطاقة:</span>
+                                <button
+                                    onClick={() => setSelectedCardProvider('all')}
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${selectedCardProvider === 'all' ? 'bg-blue-100 dark:bg-blue-950/40 text-blue-600 border border-blue-200 dark:border-blue-800' : 'bg-gray-50 dark:bg-gray-900 text-gray-400 hover:text-gray-600'}`}
+                                >
+                                    جميع الخدمات
+                                </button>
+                                {availableCardProviders.map(provider => (
+                                    <button
+                                        key={provider}
+                                        onClick={() => setSelectedCardProvider(provider)}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${selectedCardProvider === provider ? 'bg-blue-600 text-white shadow-sm' : 'bg-gray-50 dark:bg-gray-900 text-gray-400 hover:text-blue-600 border border-gray-100 dark:border-gray-800'}`}
+                                    >
+                                        💳 {provider} ({cardPayments.filter(p => (p.card_provider || 'غير محدد') === provider).length})
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                     </div>
 
                     <div className="overflow-x-auto text-sm">
@@ -140,6 +297,7 @@ export default function PaymentsPage() {
                                     <th className="px-6 py-4 text-gray-400 font-bold text-[11px] uppercase tracking-widest leading-none">رقم المعاملة</th>
                                     <th className="px-6 py-4 text-gray-400 font-bold text-[11px] uppercase tracking-widest leading-none">رقم الطلب</th>
                                     <th className="px-6 py-4 text-gray-400 font-bold text-[11px] uppercase tracking-widest leading-none">وسيلة الدفع</th>
+                                    <th className="px-6 py-4 text-gray-400 font-bold text-[11px] uppercase tracking-widest leading-none">خدمة البطاقة</th>
                                     <th className="px-6 py-4 text-gray-400 font-bold text-[11px] uppercase tracking-widest leading-none">المبلغ</th>
                                     <th className="px-6 py-4 text-gray-400 font-bold text-[11px] uppercase tracking-widest leading-none">التوقيت</th>
                                     <th className="px-6 py-4 text-gray-400 font-bold text-[11px] uppercase tracking-widest leading-none text-center">التفاصيل</th>
@@ -147,8 +305,10 @@ export default function PaymentsPage() {
                             </thead>
                             <tbody className="divide-y divide-gray-50 dark:divide-gray-800/30">
                                 {isLoading ? (
-                                    <tr><td colSpan={6} className="p-8 text-center text-gray-400 font-bold italic">جاري التحميل...</td></tr>
-                                ) : payments.map((txn) => (
+                                    <tr><td colSpan={7} className="p-8 text-center text-gray-400 font-bold italic">جاري التحميل...</td></tr>
+                                ) : filteredPayments.length === 0 ? (
+                                    <tr><td colSpan={7} className="p-8 text-center text-gray-400 font-bold italic">لا توجد معاملات مطابقة للفلتر المحدد.</td></tr>
+                                ) : filteredPayments.map((txn) => (
                                     <tr key={txn.id} className="hover:bg-gray-50/30 dark:hover:bg-gray-900/20 transition-colors group">
                                         <td className="px-6 py-4">
                                             <div className="font-black text-gray-900 dark:text-gray-200 uppercase tabular-nums">
@@ -157,10 +317,38 @@ export default function PaymentsPage() {
                                         </td>
                                         <td className="px-6 py-4 font-semibold text-gray-400 tabular-nums">#{txn.order_id}</td>
                                         <td className="px-6 py-4">
-                                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-black ${txn.payment_method === 'card' ? 'bg-blue-50 dark:bg-blue-950/20 text-blue-600' : 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600'}`}>
-                                                {txn.payment_method === 'card' ? <CreditCard className="w-3.5 h-3.5" /> : <DollarSign className="w-3.5 h-3.5" />}
-                                                {txn.payment_method === 'card' ? 'بطاقة' : 'نقدي'}
-                                            </span>
+                                            {txn.payment_method === 'cash' && (
+                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-black bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600">
+                                                    <DollarSign className="w-3.5 h-3.5" />
+                                                    نقدي
+                                                </span>
+                                            )}
+                                            {(txn.payment_method === 'credit_card' || txn.payment_method === 'card') && (
+                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-black bg-blue-50 dark:bg-blue-950/20 text-blue-600">
+                                                    <CreditCard className="w-3.5 h-3.5" />
+                                                    بطاقة مصرفية
+                                                </span>
+                                            )}
+                                            {txn.payment_method === 'debt' && (
+                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-black bg-amber-50 dark:bg-amber-950/20 text-amber-600">
+                                                    <Clock className="w-3.5 h-3.5" />
+                                                    آجل
+                                                </span>
+                                            )}
+                                            {txn.payment_method !== 'cash' && txn.payment_method !== 'credit_card' && txn.payment_method !== 'card' && txn.payment_method !== 'debt' && (
+                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-black bg-purple-50 dark:bg-purple-950/20 text-purple-600">
+                                                    {txn.payment_method}
+                                                </span>
+                                            )}
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            {txn.card_provider ? (
+                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-black bg-blue-50 dark:bg-blue-950/30 text-blue-600 border border-blue-100 dark:border-blue-900/30">
+                                                    💳 {txn.card_provider}
+                                                </span>
+                                            ) : (
+                                                <span className="text-gray-300 dark:text-gray-700 text-xs font-semibold">—</span>
+                                            )}
                                         </td>
                                         <td className="px-6 py-4 font-black text-orange-600 italic">
                                             {txn.amount.toFixed(2)} <span className="text-[10px] not-italic mr-0.5">د.ل</span>

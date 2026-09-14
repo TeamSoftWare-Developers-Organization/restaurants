@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Sidebar, Modal, ShiftModal, ExpenseModal } from '@/components';
 import {
     ShoppingBag,
@@ -14,13 +14,15 @@ import {
     Utensils,
     Image as ImageIcon,
     CheckCircle,
-    AlertCircle
+    AlertCircle,
+    Clock,
+    User
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { useCartStore } from '@/store/cartStore';
 import { useRouter } from 'next/navigation';
 import { menuService, MenuItem, Category } from '@/services/menuService';
-import { orderService } from '@/services/orderService';
+import { orderService, Order } from '@/services/orderService';
 import { paymentService } from '@/services/paymentService';
 import { reservationService, Table } from '@/services/reservationService';
 import { treasuryService } from '@/services/treasuryService';
@@ -30,8 +32,10 @@ import { useUIStore } from '@/store/uiStore';
 export default function POSPage() {
     const { isSidebarCollapsed } = useUIStore();
     const { isLoggedIn } = useAuthStore();
-    const { items, addItem, removeItem, updateQuantity, clearCart, getTotals } = useCartStore();
+    const { items, addItem, removeItem, updateQuantity, clearCart, setCartItems, getTotals } = useCartStore();
     const router = useRouter();
+    const isOrderLoadedManually = useRef(false);
+
     const [activeCategory, setActiveCategory] = useState('الكل');
     const [searchQuery, setSearchQuery] = useState('');
     const [isClient, setIsClient] = useState(false);
@@ -49,6 +53,22 @@ export default function POSPage() {
     const [shiftMode, setShiftMode] = useState<'open' | 'close'>('open');
     const [showExpenseModal, setShowExpenseModal] = useState(false);
 
+    // Active orders state
+    const [activeOrders, setActiveOrders] = useState<Order[]>([]);
+    const [showActiveOrdersModal, setShowActiveOrdersModal] = useState(false);
+
+    // Card payment modal state
+    const [showCardModal, setShowCardModal] = useState(false);
+    const [selectedCardProvider, setSelectedCardProvider] = useState<string>('تداول');
+    const [customCardProvider, setCustomCardProvider] = useState('');
+    const [cardTransactionId, setCardTransactionId] = useState('');
+
+    // Debt payment modal state
+    const [showDebtModal, setShowDebtModal] = useState(false);
+    const [debtCustomerName, setDebtCustomerName] = useState('');
+    const [debtNotes, setDebtNotes] = useState('');
+    const [isProcessingCheckout, setIsProcessingCheckout] = useState(false);
+
     const { activeShift, setActiveShift } = useAuthStore();
 
     const { subtotal, taxAmount, total } = getTotals();
@@ -62,6 +82,21 @@ export default function POSPage() {
             checkCurrentShift();
         }
     }, [isLoggedIn, router]);
+
+    // Check if an orderId was passed in URL query to load into POS
+    useEffect(() => {
+        if (isClient && isLoggedIn) {
+            const urlParams = new URLSearchParams(window.location.search);
+            const orderIdParam = urlParams.get('orderId');
+            if (orderIdParam) {
+                orderService.getOrder(parseInt(orderIdParam))
+                    .then(ord => {
+                        if (ord) loadOrderIntoPOS(ord);
+                    })
+                    .catch(err => console.error('Failed to load order from query param', err));
+            }
+        }
+    }, [isClient, isLoggedIn]);
 
     const checkCurrentShift = async () => {
         try {
@@ -77,9 +112,46 @@ export default function POSPage() {
     };
 
     useEffect(() => {
+        if (isOrderLoadedManually.current) {
+            isOrderLoadedManually.current = false;
+            return;
+        }
         setInvoiceIssued(false);
         setCurrentOrder(null);
     }, [items]);
+
+    const fetchActiveOrders = async () => {
+        try {
+            const allOrders = await orderService.getOrders();
+            const pending = allOrders.filter(o => 
+                (o.status === 'pending' || o.status === 'preparing') && 
+                (!o.payments || o.payments.length === 0)
+            );
+            setActiveOrders(pending);
+        } catch (err) {
+            console.error('Failed to fetch active orders', err);
+        }
+    };
+
+    const loadOrderIntoPOS = (order: Order) => {
+        isOrderLoadedManually.current = true;
+        clearCart();
+        const mapped = order.items.map(it => ({
+            id: it.menu_item ? it.menu_item.id : it.id,
+            name: it.menu_item ? it.menu_item.name : 'صنف',
+            price: Number(it.unit_price),
+            quantity: it.quantity
+        }));
+        setCartItems(mapped);
+        setCurrentOrder(order);
+        setLastOrder(order);
+        setInvoiceIssued(true);
+        if (order.table_number && order.table_number.includes('طاولة')) {
+            setOrderType('dine_in');
+        } else {
+            setOrderType('takeaway');
+        }
+    };
 
     const fetchData = async () => {
         try {
@@ -91,6 +163,7 @@ export default function POSPage() {
             setMenuItems(itemsData);
             setCategories(['الكل', ...categoriesData.map(c => c.name)]);
             setTables(tablesData);
+            fetchActiveOrders();
         } catch (err) {
             console.error('Failed to fetch POS data', err);
         }
@@ -155,6 +228,24 @@ export default function POSPage() {
                                 <h1 className="text-2xl font-black text-gray-900 dark:text-white leading-none mb-1">نقطة البيع</h1>
                                 <p className="text-gray-400 dark:text-gray-500 text-[13px] font-bold opacity-70">المبيعات المباشرة</p>
                             </div>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={() => {
+                                    fetchActiveOrders();
+                                    setShowActiveOrdersModal(true);
+                                }}
+                                className="relative flex items-center gap-2 bg-card dark:bg-card border border-gray-200/80 dark:border-gray-800 hover:border-emerald-500 px-4 py-2 rounded-xl text-xs font-black text-gray-700 dark:text-gray-300 transition-all shadow-sm group active:scale-95"
+                            >
+                                <Clock className="w-4 h-4 text-amber-500 group-hover:scale-110 transition-transform" />
+                                <span>الطلبيات النشطة والمعلقة</span>
+                                {activeOrders.length > 0 && (
+                                    <span className="bg-amber-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse">
+                                        {activeOrders.length}
+                                    </span>
+                                )}
+                            </button>
                         </div>
                     </header>
 
@@ -318,20 +409,42 @@ export default function POSPage() {
                             <span className="text-xl font-black text-emerald-600 italic tabular-nums">{total.toFixed(2)} <span className="text-xs not-italic mr-1">د.ل</span></span>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-3 mt-4">
+                        <div className="grid grid-cols-3 gap-2 mt-4">
                             <button
                                 onClick={() => handleCheckout('cash')}
-                                className="flex flex-col items-center justify-center h-12 bg-gray-100 dark:bg-gray-900 text-gray-600 dark:text-gray-400 rounded-xl font-bold transition-all text-[10px] border border-gray-200/50 dark:border-gray-800"
+                                disabled={isProcessingCheckout}
+                                className="flex flex-col items-center justify-center h-12 bg-gray-100 hover:bg-gray-200 dark:bg-gray-900 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-xl font-black transition-all text-[11px] border border-gray-200/60 dark:border-gray-800 active:scale-95 disabled:opacity-50"
                             >
-                                <Banknote className="w-4 h-4 mb-0.5" />
+                                <Banknote className="w-4 h-4 mb-0.5 text-emerald-600" />
                                 نقدي
                             </button>
                             <button
-                                onClick={() => handleCheckout('card')}
-                                className="flex flex-col items-center justify-center h-12 bg-emerald-600 text-white rounded-xl font-black shadow-lg shadow-emerald-600/15 transition-all text-[10px]"
+                                onClick={() => {
+                                    if (items.length === 0 && !currentOrder) {
+                                        alert('يرجى إضافة أصناف إلى السلة أولاً');
+                                        return;
+                                    }
+                                    setShowCardModal(true);
+                                }}
+                                disabled={isProcessingCheckout}
+                                className="flex flex-col items-center justify-center h-12 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-black shadow-md shadow-emerald-600/15 transition-all text-[11px] active:scale-95 disabled:opacity-50"
                             >
                                 <CreditCard className="w-4 h-4 mb-0.5" />
                                 بطاقة
+                            </button>
+                            <button
+                                onClick={() => {
+                                    if (items.length === 0 && !currentOrder) {
+                                        alert('يرجى إضافة أصناف إلى السلة أولاً');
+                                        return;
+                                    }
+                                    setShowDebtModal(true);
+                                }}
+                                disabled={isProcessingCheckout}
+                                className="flex flex-col items-center justify-center h-12 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-black shadow-md shadow-amber-500/15 transition-all text-[11px] active:scale-95 disabled:opacity-50"
+                            >
+                                <Clock className="w-4 h-4 mb-0.5" />
+                                آجل
                             </button>
                         </div>
 
@@ -451,11 +564,182 @@ export default function POSPage() {
                 </div>
             </Modal>
 
+            {/* Card Provider Modal */}
+            <Modal
+                isOpen={showCardModal}
+                onClose={() => setShowCardModal(false)}
+                title="الدفع بالبطاقة المصرفية"
+            >
+                <div className="space-y-4 py-2">
+                    <div>
+                        <label className="text-xs font-black text-gray-700 dark:text-gray-300 block mb-2">اختر خدمة البطاقة / الدفع الإلكتروني</label>
+                        <div className="grid grid-cols-2 gap-2.5">
+                            {['تداول', 'إدفع لي', 'سداد', 'موبي كاش', 'أخرى'].map((provider) => (
+                                <button
+                                    key={provider}
+                                    type="button"
+                                    onClick={() => setSelectedCardProvider(provider)}
+                                    className={`py-3 px-4 rounded-xl text-xs font-black border transition-all flex items-center justify-between ${
+                                        selectedCardProvider === provider
+                                            ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-500 text-emerald-600 ring-2 ring-emerald-500/20'
+                                            : 'bg-card dark:bg-card border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-400 hover:border-gray-300'
+                                    }`}
+                                >
+                                    <span>{provider}</span>
+                                    {selectedCardProvider === provider && <CheckCircle className="w-4 h-4 text-emerald-600" />}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {selectedCardProvider === 'أخرى' && (
+                        <div>
+                            <label className="text-[11px] font-bold text-gray-500 mb-1 block">اسم خدمة البطاقة</label>
+                            <input
+                                type="text"
+                                placeholder="مثال: يسر، بطاقة محلية..."
+                                value={customCardProvider}
+                                onChange={(e) => setCustomCardProvider(e.target.value)}
+                                className="w-full h-10 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl px-3 text-xs font-bold outline-none focus:ring-2 focus:ring-emerald-500/20"
+                            />
+                        </div>
+                    )}
+
+                    <div>
+                        <label className="text-[11px] font-bold text-gray-500 mb-1 block">رقم المعاملة / الإيصال (اختياري)</label>
+                        <input
+                            type="text"
+                            placeholder="رقم المعاملة من جهاز POS..."
+                            value={cardTransactionId}
+                            onChange={(e) => setCardTransactionId(e.target.value)}
+                            className="w-full h-10 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl px-3 text-xs font-bold outline-none focus:ring-2 focus:ring-emerald-500/20"
+                        />
+                    </div>
+
+                    <div className="pt-3 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
+                        <span className="text-xs font-bold text-gray-400">إجمالي المبلغ:</span>
+                        <span className="text-lg font-black text-emerald-600 tabular-nums">{total.toFixed(2)} د.ل</span>
+                    </div>
+
+                    <button
+                        onClick={() => {
+                            const provider = selectedCardProvider === 'أخرى' ? (customCardProvider.trim() || 'أخرى') : selectedCardProvider;
+                            setShowCardModal(false);
+                            handleCheckout('card', provider, cardTransactionId);
+                        }}
+                        disabled={isProcessingCheckout}
+                        className="w-full h-11 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-black shadow-lg shadow-emerald-600/20 transition-all active:scale-95 text-xs disabled:opacity-50"
+                    >
+                        {isProcessingCheckout ? 'جاري الدفع...' : 'تأكيد الدفع بالبطاقة'}
+                    </button>
+                </div>
+            </Modal>
+
+            {/* Debt Modal (آجل / ذمم) */}
+            <Modal
+                isOpen={showDebtModal}
+                onClose={() => setShowDebtModal(false)}
+                title="تسجيل دفع آجل (ذمة)"
+            >
+                <div className="space-y-4 py-2">
+                    <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200/40 rounded-xl text-xs text-amber-800 dark:text-amber-300 font-bold leading-relaxed">
+                        سيتم إتمام الطلب وترحيله كـ "آجل" في قسم المدفوعات والطلبيات لمتابعته لاحقاً.
+                    </div>
+
+                    <div>
+                        <label className="text-xs font-black text-gray-700 dark:text-gray-300 block mb-1">اسم العميل أو الجهة (اختياري)</label>
+                        <input
+                            type="text"
+                            placeholder="مثال: شركة النماء / الأستاذ أحمد..."
+                            value={debtCustomerName}
+                            onChange={(e) => setDebtCustomerName(e.target.value)}
+                            className="w-full h-10 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl px-3 text-xs font-bold outline-none focus:ring-2 focus:ring-amber-500/20"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="text-[11px] font-bold text-gray-500 mb-1 block">رقم الهاتف أو ملاحظات الآجل (اختياري)</label>
+                        <input
+                            type="text"
+                            placeholder="رقم الهاتف أو بيان الذمة..."
+                            value={debtNotes}
+                            onChange={(e) => setDebtNotes(e.target.value)}
+                            className="w-full h-10 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl px-3 text-xs font-bold outline-none focus:ring-2 focus:ring-amber-500/20"
+                        />
+                    </div>
+
+                    <div className="pt-3 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
+                        <span className="text-xs font-bold text-gray-400">إجمالي المبلغ الآجل:</span>
+                        <span className="text-lg font-black text-amber-600 tabular-nums">{total.toFixed(2)} د.ل</span>
+                    </div>
+
+                    <button
+                        onClick={() => {
+                            setShowDebtModal(false);
+                            const info = debtCustomerName.trim() ? `${debtCustomerName.trim()}${debtNotes.trim() ? ' - ' + debtNotes.trim() : ''}` : debtNotes.trim();
+                            handleCheckout('debt', undefined, undefined, info);
+                        }}
+                        disabled={isProcessingCheckout}
+                        className="w-full h-11 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-black shadow-lg shadow-amber-600/20 transition-all active:scale-95 text-xs disabled:opacity-50"
+                    >
+                        {isProcessingCheckout ? 'جاري التسجيل...' : 'تأكيد تسجيل الدفع الآجل'}
+                    </button>
+                </div>
+            </Modal>
+
+            {/* Active Orders Modal */}
+            <Modal
+                isOpen={showActiveOrdersModal}
+                onClose={() => setShowActiveOrdersModal(false)}
+                title="الطلبيات النشطة والمعلقة"
+            >
+                <div className="space-y-3 py-2 max-h-[60vh] overflow-y-auto">
+                    {activeOrders.length === 0 ? (
+                        <div className="p-8 text-center text-gray-400 text-xs font-bold">
+                            لا توجد طلبيات معلقة حالياً. جميع الطلبيات مكتملة ومسددة.
+                        </div>
+                    ) : (
+                        activeOrders.map((ord) => (
+                            <div
+                                key={ord.id}
+                                className="p-3.5 bg-gray-50/70 dark:bg-gray-900/40 rounded-xl border border-gray-100 dark:border-gray-800 flex items-center justify-between gap-3 hover:border-emerald-500/40 transition-all"
+                            >
+                                <div className="min-w-0 flex-1">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <span className="font-black text-gray-900 dark:text-white text-xs">#{ord.id}</span>
+                                        <span className="bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 text-[10px] font-bold px-2 py-0.5 rounded">
+                                            {ord.table_number || 'سفري'}
+                                        </span>
+                                        <span className="text-gray-400 text-[10px]">
+                                            {new Date(ord.order_date_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                                        </span>
+                                    </div>
+                                    <div className="text-[11px] text-gray-500 truncate">
+                                        {ord.items.map(i => `${i.menu_item?.name || 'صنف'} (${i.quantity})`).join('، ')}
+                                    </div>
+                                    <div className="text-xs font-black text-emerald-600 mt-1">
+                                        {ord.total_amount} د.ل
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => {
+                                        loadOrderIntoPOS(ord);
+                                        setShowActiveOrdersModal(false);
+                                    }}
+                                    className="h-9 px-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow-md shadow-emerald-600/15 transition-all active:scale-95 whitespace-nowrap flex items-center gap-1.5"
+                                >
+                                    <span>تحميل وسداد</span>
+                                </button>
+                            </div>
+                        ))
+                    )}
+                </div>
+            </Modal>
+
             <ShiftModal
                 isOpen={showShiftModal}
                 onClose={() => {
                     if (shiftMode === 'open' && !activeShift) {
-                        // Prevent closing open shift modal if no active shift
                         return;
                     }
                     setShowShiftModal(false);
@@ -470,29 +754,56 @@ export default function POSPage() {
         </div>
     );
 
-    async function handleCheckout(method: string) {
-        if (items.length === 0) return;
-
-        if (!invoiceIssued) {
-            setShowWarningModal(true);
+    async function handleCheckout(method: 'cash' | 'card' | 'debt', cardProvider?: string, transactionId?: string, debtDetails?: string) {
+        if (items.length === 0 && !currentOrder) {
+            alert('يرجى إضافة أصناف إلى السلة أولاً');
             return;
         }
 
         try {
+            setIsProcessingCheckout(true);
+            let orderToPay = currentOrder;
+
+            // If order was not created yet, create it automatically!
+            if (!orderToPay) {
+                const selectedTable = tables.find(t => t.id === selectedTableId);
+                const tableDescriptor = orderType === 'takeaway' ? 'سفري' : (selectedTable ? `طاولة ${selectedTable.table_number}` : 'محلي');
+
+                const orderPayload = {
+                    items: items.map(item => ({
+                        menu_item_id: item.id,
+                        quantity: item.quantity
+                    })),
+                    status: 'pending',
+                    table_number: tableDescriptor,
+                };
+
+                orderToPay = await orderService.createOrder(orderPayload);
+                setCurrentOrder(orderToPay);
+                setLastOrder(orderToPay);
+                setInvoiceIssued(true);
+            }
+
             // Record payment
             await paymentService.recordPayment({
-                order_id: currentOrder.id,
+                order_id: orderToPay.id,
                 amount: total,
-                payment_method: method === 'card' ? 'credit_card' : 'cash'
+                payment_method: method === 'card' ? 'credit_card' : method === 'debt' ? 'debt' : 'cash',
+                card_provider: method === 'card' ? (cardProvider || 'تداول') : undefined,
+                transaction_id: transactionId || (debtDetails ? `آجل: ${debtDetails}` : undefined)
             });
 
             // Update order status to completed
-            await orderService.updateOrder(currentOrder.id, { status: 'completed' });
+            await orderService.updateOrder(orderToPay.id, { status: 'completed' });
 
             setShowSuccessModal(true);
+            fetchActiveOrders();
         } catch (err: any) {
             console.error('Checkout failed', err);
-            alert('حدث خطأ أثناء إتمام الطلب');
+            const msg = err?.response?.data?.message || err?.message || 'حدث خطأ أثناء إتمام الدفع';
+            alert(`فشل إتمام العملية: ${msg}`);
+        } finally {
+            setIsProcessingCheckout(false);
         }
     }
 

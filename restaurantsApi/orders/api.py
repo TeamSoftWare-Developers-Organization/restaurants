@@ -45,6 +45,13 @@ class OrderIn(Schema):
     # يمكن أن نستقبل قائمة الأصناف كجزء من الطلب عند الإنشاء
     items: List[OrderItemIn] = [] 
 
+class PaymentSummaryOut(Schema):
+    id: int
+    amount: float
+    payment_method: str
+    card_provider: Optional[str] = None
+    payment_date_time: datetime
+
 # Schema لإخراج بيانات الطلب (يشمل قائمة أصناف الطلب)
 class OrderOut(Schema):
     id: int
@@ -55,6 +62,7 @@ class OrderOut(Schema):
     total_amount: float
     discount_amount: float
     items: List[OrderItemOut] # قائمة بأصناف الطلب المرتبطة
+    payments: List[PaymentSummaryOut] = []
 
 
 # 3. تعريف نقاط نهاية API لـ Order
@@ -64,7 +72,7 @@ def list_orders(request):
     """
     جلب قائمة بجميع الطلبات.
     """
-    orders = Order.objects.all()
+    orders = Order.objects.prefetch_related('items__menu_item', 'payments').all()
     return orders
 
 @order_router.post("/", response={200: OrderOut, 400: dict, 500: dict}, auth=JWTAuth())

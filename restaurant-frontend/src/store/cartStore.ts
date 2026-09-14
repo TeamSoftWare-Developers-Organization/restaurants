@@ -18,6 +18,7 @@ interface CartState {
     removeItem: (id: number) => void;
     updateQuantity: (id: number, quantity: number) => void;
     clearCart: () => void;
+    setCartItems: (items: CartItem[]) => void;
 
     // الحسابات (Computed Values)
     getTotals: () => {
@@ -70,6 +71,7 @@ export const useCartStore = create<CartState>()(
             },
 
             clearCart: () => set({ items: [] }),
+            setCartItems: (items) => set({ items }),
 
             // محرك العمليات الحسابية الخوارزمي
             getTotals: () => {

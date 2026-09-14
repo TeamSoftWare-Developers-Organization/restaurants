@@ -9,6 +9,14 @@ export interface OrderItem {
     notes?: string;
 }
 
+export interface OrderPayment {
+    id: number;
+    amount: number;
+    payment_method: string;
+    card_provider?: string;
+    payment_date_time: string;
+}
+
 export interface Order {
     id: number;
     employee?: any;
@@ -18,6 +26,7 @@ export interface Order {
     total_amount: number;
     discount_amount: number;
     items: OrderItem[];
+    payments?: OrderPayment[];
 }
 
 export const orderService = {

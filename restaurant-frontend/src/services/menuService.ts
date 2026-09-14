@@ -51,3 +51,19 @@ export const menuService = {
         return response.data;
     }
 };
+
+export const isLiquidOrDrink = (item: { name?: string; category?: { name: string } | null } | null | undefined): boolean => {
+    if (!item) return false;
+    const drinkKeywords = [
+        'ماء', 'مياه', 'معدنية', 'مساه',
+        'مشروب', 'مشروبات', 'عصير', 'عصائر', 'بارد', 'باردة',
+        'ساخن', 'ساخنة', 'قهوة', 'شاي', 'بيبسي', 'كولا',
+        'سفن', 'سبرايت', 'صودا', 'غازية', 'غازي', 'سائل',
+        'سوائل', 'نسكافيه', 'كابتشينو', 'لاتيه', 'اسبريسو',
+        'إسبريسو', 'موخيتو', 'موهيتو', 'سموذي', 'كوكتيل',
+        'drink', 'beverage', 'water', 'juice', 'coffee', 'tea'
+    ];
+    const name = (item.name || '').toLowerCase();
+    const catName = (item.category?.name || '').toLowerCase();
+    return drinkKeywords.some(kw => name.includes(kw) || catName.includes(kw));
+};

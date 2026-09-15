@@ -65,7 +65,14 @@ def get_me(request):
     try:
         employee_profile = Employee.objects.select_related('user').get(user=request.user)
     except Employee.DoesNotExist:
-        return 401, {"message": "لا يوجد ملف موظف مرتبط بهذا المستخدم."}
+        if request.user.is_superuser or request.user.is_staff or request.user.username == 'admin':
+            employee_profile = Employee.objects.create(
+                user=request.user,
+                role='manager',
+                permissions=Employee.get_default_permissions_for_role('manager')
+            )
+        else:
+            return 401, {"message": "لا يوجد ملف موظف مرتبط بهذا المستخدم."}
 
     return {
         "session_id": "jwt-authenticated", 

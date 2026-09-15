@@ -8,7 +8,7 @@ from django.db.models import Sum
 
 from .models import Payment, Shift, TreasuryTransaction, SalaryPayment
 from orders.models import Order
-from orders.api import OrderOut 
+from orders.api import OrderOut
 from employees.models import Employee
 from ninja_jwt.authentication import JWTAuth
 from django.utils import timezone

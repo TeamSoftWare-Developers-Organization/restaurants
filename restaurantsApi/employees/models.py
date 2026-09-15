@@ -18,9 +18,104 @@ class Employee(models.Model):
     role = models.CharField(max_length=50, choices=ROLE_CHOICES, default='waiter')
     phone_number = models.CharField(max_length=20, blank=True, null=True)
     hire_date = models.DateField(auto_now_add=True)
+    permissions = models.JSONField(default=dict, blank=True, null=True)
 
-    # ... (باقي كود الموديل)
-    # لاحظ أننا أزلنا first_name, last_name, username, password حيث أصبحت الآن في User
+    @classmethod
+    def get_default_permissions_for_role(cls, role: str) -> dict:
+        """إرجاع الصلاحيات الافتراضية لكل دور وظيفي"""
+        all_perms = {
+            'dashboard': True,
+            'pos': True,
+            'orders': True,
+            'tables': True,
+            'reservations': True,
+            'menu': True,
+            'recipes': True,
+            'inventory': True,
+            'payments': True,
+            'treasury': True,
+            'expenses': True,
+            'salaries': True,
+            'employees': True,
+            'settings': True
+        }
+        if role == 'manager':
+            return all_perms.copy()
+        elif role == 'cashier':
+            return {
+                'dashboard': True,
+                'pos': True,
+                'orders': True,
+                'tables': True,
+                'reservations': True,
+                'payments': True,
+                'treasury': True,
+                'expenses': False,
+                'menu': False,
+                'recipes': False,
+                'inventory': False,
+                'salaries': False,
+                'employees': False,
+                'settings': False
+            }
+        elif role == 'waiter':
+            return {
+                'dashboard': False,
+                'pos': True,
+                'orders': True,
+                'tables': True,
+                'reservations': True,
+                'payments': False,
+                'treasury': False,
+                'expenses': False,
+                'menu': False,
+                'recipes': False,
+                'inventory': False,
+                'salaries': False,
+                'employees': False,
+                'settings': False
+            }
+        elif role == 'chef':
+            return {
+                'dashboard': False,
+                'pos': False,
+                'orders': True,
+                'tables': False,
+                'reservations': False,
+                'payments': False,
+                'treasury': False,
+                'expenses': False,
+                'menu': True,
+                'recipes': True,
+                'inventory': True,
+                'salaries': False,
+                'employees': False,
+                'settings': False
+            }
+        else:
+            return {
+                'dashboard': True,
+                'pos': True,
+                'orders': True,
+                'tables': False,
+                'reservations': False,
+                'payments': False,
+                'treasury': False,
+                'expenses': False,
+                'menu': False,
+                'recipes': False,
+                'inventory': False,
+                'salaries': False,
+                'employees': False,
+                'settings': False
+            }
+
+    def get_effective_permissions(self) -> dict:
+        """إرجاع الصلاحيات الفعلية، مع دمج الصلاحيات المخصصة فوق الافتراضية"""
+        defaults = self.get_default_permissions_for_role(self.role)
+        if isinstance(self.permissions, dict) and self.permissions:
+            defaults.update(self.permissions)
+        return defaults
 
     class Meta:
         verbose_name = "موظف"

@@ -4,6 +4,7 @@ from ninja import Router, Schema
 from typing import List, Optional
 from datetime import datetime
 from django.shortcuts import get_object_or_404
+from django.db import transaction
 
 from .models import Order, OrderItem
 from employees.models import Employee # نحتاج لاستيراد الموظف
@@ -85,44 +86,61 @@ def create_order(request, order_data: OrderIn):
         from payments.models import Shift
         current_shift = Shift.objects.filter(cashier=request.auth, status='open').first()
         if not current_shift:
-            return 400, {"message": "يرجى فتح وردية أولاً قبل البدء في المبيعات."}
+            current_shift = Shift.objects.filter(status='open').first()
+        if not current_shift:
+            return 400, {"message": "يرجى فتح وردية أولاً قبل البدء في المبيعات وحفظ الطلبات."}
+
+        # التحقق من وجود أصناف في الطلب
+        if not order_data.items:
+            return 400, {"message": "لا يمكن إنشاء طلب بدون أصناف. يرجى إضافة صنف واحد على الأقل."}
+
+        # التحقق من صحة الأصناف قبل البدء
+        from inventory.models import RecipeIngredient
+        menu_items_map = {}
+        for item_data in order_data.items:
+            m_item = MenuItem.objects.filter(id=item_data.menu_item_id).first()
+            if not m_item:
+                return 400, {"message": f"أحد الأصناف المحددة (رقم {item_data.menu_item_id}) لم يعد متوفراً في قائمة الطعام."}
+            menu_items_map[item_data.menu_item_id] = m_item
 
         employee = None
         if order_data.employee_id:
-            employee = get_object_or_404(Employee, id=order_data.employee_id)
-        else:
-            # محاولة ربط الطلب بالموظف الحالي تلقائياً
+            employee = Employee.objects.filter(id=order_data.employee_id).first()
+        if not employee:
             employee = Employee.objects.filter(user=request.auth).first()
 
-        order = Order.objects.create(
-            employee=employee,
-            table_number=order_data.table_number,
-            status=order_data.status or 'pending',
-            discount_amount=order_data.discount_amount
-        )
-
-        # إضافة أصناف الطلب وخصم المكونات من المخزون
-        from inventory.models import RecipeIngredient
-        for item_data in order_data.items:
-            menu_item = get_object_or_404(MenuItem, id=item_data.menu_item_id)
-            OrderItem.objects.create(
-                order=order,
-                menu_item=menu_item,
-                quantity=item_data.quantity,
-                unit_price=menu_item.price,
-                notes=item_data.notes
+        with transaction.atomic():
+            order = Order.objects.create(
+                employee=employee,
+                table_number=order_data.table_number,
+                status=order_data.status or 'pending',
+                discount_amount=order_data.discount_amount
             )
+
+            # إضافة أصناف الطلب وخصم المكونات من المخزون
+            for item_data in order_data.items:
+                menu_item = menu_items_map[item_data.menu_item_id]
+                OrderItem.objects.create(
+                    order=order,
+                    menu_item=menu_item,
+                    quantity=item_data.quantity,
+                    unit_price=menu_item.price,
+                    notes=item_data.notes
+                )
+                
+                # خصم المكونات من المخزون تلقائياً إذا وُجدت وصفة للصنف
+                recipes = RecipeIngredient.objects.filter(menu_item=menu_item)
+                for r in recipes:
+                    deduct_amount = float(r.quantity_needed) * item_data.quantity
+                    r.ingredient.current_stock = max(0.0, float(r.ingredient.current_stock) - deduct_amount)
+                    r.ingredient.save()
             
-            # خصم المكونات من المخزون تلقائياً إذا وُجدت وصفة للصنف
-            recipes = RecipeIngredient.objects.filter(menu_item=menu_item)
-            for r in recipes:
-                deduct_amount = float(r.quantity_needed) * item_data.quantity
-                r.ingredient.current_stock = max(0.0, float(r.ingredient.current_stock) - deduct_amount)
-                r.ingredient.save()
-        
-        order.calculate_total() # تحديث الإجمالي بعد إضافة الأصناف
+            order.calculate_total() # تحديث الإجمالي بعد إضافة الأصناف
+            
         return 200, order
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return 500, {"message": str(e)}
 
 @order_router.get("/{order_id}", response=OrderOut, auth=JWTAuth())

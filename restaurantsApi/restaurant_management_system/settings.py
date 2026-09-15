@@ -86,16 +86,24 @@ WSGI_APPLICATION = 'restaurant_management_system.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'restaurant_db',       # اسم قاعدة البيانات التي أنشأتها
-        'USER': 'postgres',    # اسم المستخدم الذي أنشأته
-        'PASSWORD': 'zafer4519932093',  # كلمة مرور المستخدم (إذا قمت بتعيين واحدة)
-        'HOST': 'localhost',          # أو عنوان IP لخادم PostgreSQL
-        'PORT': '5433',               # المنفذ لـ PostgreSQL
+if os.environ.get('CI'):
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.environ.get('DB_NAME', 'restaurant_db'),
+            'USER': os.environ.get('DB_USER', 'postgres'),
+            'PASSWORD': os.environ.get('DB_PASSWORD', 'zafer4519932093'),
+            'HOST': os.environ.get('DB_HOST', 'localhost'),
+            'PORT': os.environ.get('DB_PORT', '5433'),
+        }
+    }
 
 
 # Password validation

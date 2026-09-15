@@ -18,7 +18,11 @@ class EmployeeIn(Schema):
     role: str # يمكنك إضافة تحقق هنا لضمان أنها من الخيارات المتاحة
     phone_number: Optional[str] = None # Optional تعني أنه يمكن أن يكون فارغاً
     username: str
-    password: str # ستتم معالجتها لتشفيرها قبل الحفظ
+    password: Optional[str] = None # ستتم معالجتها لتشفيرها قبل الحفظ
+    permissions: Optional[dict] = None
+
+class EmployeePermissionsIn(Schema):
+    permissions: dict
 
 # Schema لإخراج بيانات الموظف (يشمل id، ولا يعرض كلمة المرور)
 class EmployeeOut(Schema):
@@ -29,6 +33,7 @@ class EmployeeOut(Schema):
     phone_number: Optional[str] = None
     hire_date: str # يمكن تحويله إلى str لسهولة العرض في API
     username: str
+    permissions: Optional[dict] = None
 
     @staticmethod
     def resolve_first_name(obj):
@@ -44,6 +49,10 @@ class EmployeeOut(Schema):
     def resolve_username(obj):
         if not obj.user: return ""
         return obj.user.username
+
+    @staticmethod
+    def resolve_permissions(obj):
+        return obj.get_effective_permissions()
 
     @staticmethod
     def resolve_hire_date(obj):
@@ -84,7 +93,8 @@ def create_employee(request, employee_data: EmployeeIn):
             employee = Employee.objects.create(
                 user=user,
                 role=employee_data.role,
-                phone_number=employee_data.phone_number
+                phone_number=employee_data.phone_number,
+                permissions=employee_data.permissions or {}
             )
             return 200, employee
             
@@ -109,8 +119,23 @@ def update_employee(request, employee_id: int, employee_data: EmployeeIn):
 
             employee.role = employee_data.role
             employee.phone_number = employee_data.phone_number
+            if employee_data.permissions is not None:
+                employee.permissions = employee_data.permissions
             employee.save()
             return 200, employee
+    except Exception as e:
+        return 400, {"message": str(e)}
+
+@employee_router.put("/{employee_id}/permissions/", response={200: EmployeeOut, 400: dict})
+def update_employee_permissions(request, employee_id: int, data: EmployeePermissionsIn):
+    """
+    تحديث صلاحيات الموظف بشكل منفصل.
+    """
+    employee = get_object_or_404(Employee, id=employee_id)
+    try:
+        employee.permissions = data.permissions
+        employee.save()
+        return 200, employee
     except Exception as e:
         return 400, {"message": str(e)}
 

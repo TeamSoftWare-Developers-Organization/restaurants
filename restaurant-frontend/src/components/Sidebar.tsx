@@ -32,20 +32,20 @@ import { useAuthStore } from '@/store/authStore';
 import { useUIStore } from '@/store/uiStore';
 
 const links = [
-    { label: 'لوحة التحكم', icon: Home, href: '/', color: 'indigo' },
-    { label: 'نقطة البيع', icon: ShoppingBag, href: '/pos', color: 'emerald' },
-    { label: 'الموظفون', icon: User, href: '/employees', color: 'blue' },
-    { label: 'المخزون', icon: Snowflake, href: '/inventory', color: 'amber' },
-    { label: 'قائمة الطعام', icon: ChefHat, href: '/menu', color: 'violet' },
-    { label: 'وصفات الطعام', icon: CookingPot, href: '/recipes', color: 'amber' },
-    { label: 'الطلبات', icon: Truck, href: '/orders', color: 'rose' },
-    { label: 'الطاولات', icon: TableIcon, href: '/tables', color: 'cyan' },
-    { label: 'الحجوزات', icon: BadgeCheck, href: '/reservations', color: 'sky' },
-    { label: 'المدفوعات', icon: Building2, href: '/payments', color: 'orange' },
-    { label: 'الخزينة', icon: Wallet, href: '/treasury', color: 'indigo' },
-    { label: 'المصروفات', icon: ReceiptText, href: '/expenses', color: 'rose' },
-    { label: 'المرتبات', icon: Banknote, href: '/salaries', color: 'emerald' },
-    { label: 'الإعدادات', icon: Settings, href: '/settings', color: 'slate' }
+    { label: 'لوحة التحكم', icon: Home, href: '/', color: 'indigo', perm: 'dashboard' },
+    { label: 'نقطة البيع', icon: ShoppingBag, href: '/pos', color: 'emerald', perm: 'pos' },
+    { label: 'الموظفون والصلاحيات', icon: User, href: '/employees', color: 'blue', perm: 'employees' },
+    { label: 'المخزون', icon: Snowflake, href: '/inventory', color: 'amber', perm: 'inventory' },
+    { label: 'قائمة الطعام', icon: ChefHat, href: '/menu', color: 'violet', perm: 'menu' },
+    { label: 'وصفات الطعام', icon: CookingPot, href: '/recipes', color: 'amber', perm: 'recipes' },
+    { label: 'الطلبات', icon: Truck, href: '/orders', color: 'rose', perm: 'orders' },
+    { label: 'الطاولات', icon: TableIcon, href: '/tables', color: 'cyan', perm: 'tables' },
+    { label: 'الحجوزات', icon: BadgeCheck, href: '/reservations', color: 'sky', perm: 'reservations' },
+    { label: 'المدفوعات', icon: Building2, href: '/payments', color: 'orange', perm: 'payments' },
+    { label: 'الخزينة', icon: Wallet, href: '/treasury', color: 'indigo', perm: 'treasury' },
+    { label: 'المصروفات', icon: ReceiptText, href: '/expenses', color: 'rose', perm: 'expenses' },
+    { label: 'المرتبات', icon: Banknote, href: '/salaries', color: 'emerald', perm: 'salaries' },
+    { label: 'الإعدادات', icon: Settings, href: '/settings', color: 'slate', perm: 'settings' }
 ];
 
 const colorVariants: Record<string, string> = {
@@ -85,9 +85,21 @@ export default function Sidebar({ className }: SidebarProps) {
     const { theme, setTheme, resolvedTheme } = useTheme();
     const [mounted, setMounted] = useState(false);
 
-    useEffect(() => setMounted(true), []);
+    useEffect(() => {
+        setMounted(true);
+        const { token, user, checkAuth } = useAuthStore.getState();
+        if (token && (!user || !user.role)) {
+            checkAuth();
+        }
+    }, []);
 
     const isDark = mounted && (resolvedTheme === 'dark' || theme === 'dark');
+    const hasPermission = useAuthStore((state) => state.hasPermission);
+
+    // Filter links based on current user permissions
+    const visibleLinks = links.filter(link => !link.perm || hasPermission(link.perm));
+    // Safety fallback: ensure sidebar options are always displayed and never empty
+    const displayLinks = visibleLinks.length > 0 ? visibleLinks : links;
 
     return (
         <aside
@@ -120,7 +132,7 @@ export default function Sidebar({ className }: SidebarProps) {
                 {/* Navigation - Scrollable Area */}
                 <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-2 scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-gray-800 scrollbar-track-transparent">
                     <nav className="space-y-1">
-                        {links.map((link) => {
+                        {displayLinks.map((link) => {
                             const Icon = link.icon;
                             const isActive = pathname === link.href || (link.href === '/stock' && pathname === '/');
 

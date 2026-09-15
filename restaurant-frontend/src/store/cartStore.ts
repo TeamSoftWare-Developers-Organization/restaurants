@@ -2,21 +2,25 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 // 1. تعريف هيكل الصنف في السلة
-interface CartItem {
+export interface CartItem {
     id: number;
     name: string;
     price: number;
     quantity: number;
+    image_url?: string | null;
+    category?: string | null;
+    notes?: string;
 }
 
 // 2. تعريف هيكل المخزن (Store) والعمليات الحسابية
-interface CartState {
+export interface CartState {
     items: CartItem[];
 
     // العمليات (Actions)
     addItem: (product: Omit<CartItem, 'quantity'>) => void;
     removeItem: (id: number) => void;
     updateQuantity: (id: number, quantity: number) => void;
+    updateItemNotes: (id: number, notes: string) => void;
     clearCart: () => void;
     setCartItems: (items: CartItem[]) => void;
 
@@ -43,12 +47,12 @@ export const useCartStore = create<CartState>()(
                     set({
                         items: currentItems.map((item) =>
                             item.id === product.id
-                                ? { ...item, quantity: item.quantity + 1 }
+                                ? { ...item, quantity: item.quantity + 1, image_url: product.image_url ?? item.image_url, category: product.category ?? item.category }
                                 : item
                         ),
                     });
                 } else {
-                    set({ items: [...currentItems, { ...product, quantity: 1 }] });
+                    set({ items: [...currentItems, { ...product, quantity: 1, notes: product.notes || '' }] });
                 }
             },
 
@@ -66,6 +70,15 @@ export const useCartStore = create<CartState>()(
                 set({
                     items: get().items.map((item) =>
                         item.id === id ? { ...item, quantity } : item
+                    ),
+                });
+            },
+
+            // تحديث ملاحظات الصنف (خاصة بالمطبخ والتحضير)
+            updateItemNotes: (id, notes) => {
+                set({
+                    items: get().items.map((item) =>
+                        item.id === id ? { ...item, notes } : item
                     ),
                 });
             },

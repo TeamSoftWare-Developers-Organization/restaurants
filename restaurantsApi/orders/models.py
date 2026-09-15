@@ -4,6 +4,7 @@ from employees.models import Employee # استيراد موديل الموظف
 from menu.models import MenuItem     # استيراد موديل صنف القائمة
 
 class Order(models.Model):
+    id: int
     # order_id (مفتاح أساسي) يتم إنشاؤه تلقائياً بواسطة Django كـ 'id'
     # مفتاح خارجي يربط الطلب بالموظف الذي قام بإنشائه/أخذه
     employee = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, blank=True, related_name='orders_taken')

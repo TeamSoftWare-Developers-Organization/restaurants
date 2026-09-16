@@ -26,11 +26,13 @@ jobs:
           cache-dependency-path: restaurantsApi/requirements.txt
 
       - name: Install dependencies
+        working-directory: ./restaurantsApi
         run: |
           python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install -r requirements.txt
 
       - name: Validate Python syntax & Django check
+        working-directory: ./restaurantsApi
         run: |
           python manage.py check
 
